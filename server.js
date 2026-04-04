@@ -16,6 +16,9 @@ import { tokeStdlibRef } from "./tools/stdlib.js";
 import { tokeGenerate } from "./tools/generate.js";
 import { tokeBench } from "./tools/bench.js";
 import { tokeCompanion } from "./tools/companion.js";
+import { tokeCompress, tokeDecompress } from "./tools/compress.js";
+import { tokeAnalyse } from "./tools/analyse.js";
+import { tokeRender } from "./tools/render.js";
 
 const require = createRequire(import.meta.url);
 const { checkToolRateLimit, checkConnectionLimit } = require("./lib/rate-limit-middleware");
@@ -38,7 +41,7 @@ try {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a configured MCP server with all 8 toke tools registered.
+ * Create a configured MCP server with all 12 toke tools registered.
  *
  * @param {object} [options]
  * @param {string} [options.name]    - Server name (default: "toke-mcp")
@@ -134,6 +137,95 @@ export function createMcpServer(options = {}) {
     },
     async ({ source, mode, companion }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeCompanion(source, mode, companion), null, 2) }],
+    })
+  );
+
+  // STABLE API v1 - do not change schemas below without version bump
+  server.tool(
+    "toke_compress",
+    "Compress text using toke compression (tkc --compress). Returns compressed output with token reduction stats.",
+    {
+      input: z.string().describe("Text to compress"),
+      preserve_atoms: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "Regex patterns for tokens to preserve unchanged (e.g. '$[A-Z][A-Z0-9_]+[0-9]+')"
+        ),
+    },
+    async ({ input, preserve_atoms }) => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            await tokeCompress(input, preserve_atoms ?? []),
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
+  server.tool(
+    "toke_decompress",
+    "Decompress toke-compressed text (tkc --decompress). Returns the original text.",
+    {
+      input: z.string().describe("Compressed text to decompress"),
+    },
+    async ({ input }) => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(await tokeDecompress(input), null, 2),
+        },
+      ],
+    })
+  );
+
+  server.tool(
+    "toke_analyse",
+    "Pre-flight token budget estimation. Analyses text and reports raw and estimated compressed token counts without modifying the input.",
+    {
+      input: z.string().describe("Text to analyse"),
+      tokenizer: z
+        .enum(["cl100k_base", "o200k_base", "toke-bpe"])
+        .optional()
+        .describe("Tokenizer to use for counting (default: cl100k_base)"),
+    },
+    async ({ input, tokenizer }) => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            await tokeAnalyse(input, tokenizer ?? "cl100k_base"),
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
+  server.tool(
+    "toke_render",
+    "Render a parameterised template by substituting {{varname}} slots. Placeholder atoms ($PERSON_1 etc.) are passed through unchanged. Pure JS — does not call tkc.",
+    {
+      template: z
+        .string()
+        .describe("Template string with {{varname}} slots"),
+      vars: z
+        .record(z.string())
+        .optional()
+        .describe("Variable substitutions mapping slot names to values"),
+    },
+    async ({ template, vars }) => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(tokeRender(template, vars ?? {}), null, 2),
+        },
+      ],
     })
   );
 
