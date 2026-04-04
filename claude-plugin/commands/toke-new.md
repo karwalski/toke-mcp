@@ -8,11 +8,11 @@ Create a minimal Toke project with a module, main function, and Makefile.
 
 2. Create a directory with the project name in the current working directory.
 
-3. Create `<project>/main.tk` with this content (Phase 1 syntax):
+3. Create `<project>/main.tk` with this content:
 
 ```
-M=<project>;
-F=main():i64{
+m=<project>;
+f=main():i64{
   <0
 };
 ```

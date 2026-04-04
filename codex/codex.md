@@ -22,14 +22,20 @@ When writing Toke code, always follow this pattern:
 
 Never present Toke code as complete without passing it through `toke_check`.
 
+## Character Set — 56 characters
+
+Lowercase `a-z`, digits `0-9`, symbols `( ) { } = : . ; + - * / < > ! | $ @`, reserved `^ ~`, whitespace.
+
+No uppercase letters. No square brackets. `$` marks reference and user-defined types. `@` marks arrays and maps.
+
 ## Keywords (12 total)
 
 | Keyword | Role |
 |---------|------|
-| `M` | Module declaration |
-| `F` | Function definition |
-| `T` | Struct type definition |
-| `I` | Import declaration |
+| `m` | Module declaration |
+| `f` | Function definition |
+| `t` | Struct type definition |
+| `i` | Import declaration |
 | `if` | Conditional |
 | `el` | Else branch |
 | `lp` | Loop |
@@ -45,26 +51,26 @@ The `<` operator is short-form return (idiomatic). Both `<expr` and `rt expr` ar
 
 Scalar types: `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `f32`, `f64`, `bool`, `void`.
 
-Reference types: `Str` (string), `Byte` (byte).
+Reference types: `$str` (string), `$byte` (byte).
 
-User-defined types: uppercase-initial names (e.g. `Vec2`).
+User-defined types: `$`-prefixed lowercase names (e.g. `$vec2`, `$config`).
 
-Arrays: `[i64]` for array of i64. Maps: `[Str:i64]`.
+Arrays: `@i64` for array of i64. Maps: `@($str:i64)`.
 
-Error unions: `i64!MathErr` -- function returns i64 or MathErr.
+Error unions: `i64!$matherr` -- function returns i64 or $matherr.
 
 ## Syntax Reference
 
 ### Module (required, must be first)
 
 ```
-M=mymodule;
+m=mymodule;
 ```
 
 ### Function
 
 ```
-F=name(param1:type1;param2:type2):returntype{
+f=name(param1:type1;param2:type2):returntype{
   body
 };
 ```
@@ -74,7 +80,7 @@ Parameters separated by `;` (never `,`). Trailing `;` after `}`.
 ### Return
 
 ```
-F=add(a:i64;b:i64):i64{
+f=add(a:i64;b:i64):i64{
   <a+b
 };
 ```
@@ -120,31 +126,32 @@ Three parts separated by `;`: initialiser, condition, step. Use `br` to break.
 ### Structs
 
 ```
-T=Vec2{x:i64;y:i64};
-let v=Vec2{x:3;y:4};
+t=$vec2{x:i64;y:i64};
+let v=$vec2{x:3;y:4};
 let px=v.x;
 ```
 
 ### Arrays
 
 ```
-let nums=[10;20;30];
-let first=arr[0];
+let nums=@(10;20;30);
+let first=arr.0;
+let nth=arr.get(i);
 let length=arr.len;
 ```
 
-Elements separated by `;`.
+Elements separated by `;`. Constant index: `arr.0`. Variable index: `arr.get(i)`.
 
 ### Imports
 
 ```
-I=alias:module.path;
+i=alias:module.path;
 ```
 
 ### Void Functions
 
 ```
-F=greet():void{
+f=greet():void{
   let x=42
 };
 ```
@@ -196,11 +203,11 @@ This order is enforced by the compiler.
 ### Example 1: Addition
 
 ```
-M=test;
-F=add(a:i64;b:i64):i64{
+m=test;
+f=add(a:i64;b:i64):i64{
   <a+b
 };
-F=main():i64{
+f=main():i64{
   <add(3;4)
 };
 ```
@@ -208,8 +215,8 @@ F=main():i64{
 ### Example 2: Conditional Logic
 
 ```
-M=test;
-F=main():i64{
+m=test;
+f=main():i64{
   let x=5;
   if(x>3){
     <1
@@ -222,12 +229,12 @@ F=main():i64{
 ### Example 3: Struct with Field Access
 
 ```
-M=test;
-T=Vec2{x:i64;y:i64};
-F=add(a:Vec2;b:Vec2):Vec2{<Vec2{x:a.x+b.x;y:a.y+b.y}};
-F=main():i64{
-  let a=Vec2{x:3;y:4};
-  let b=Vec2{x:10;y:20};
+m=test;
+t=$vec2{x:i64;y:i64};
+f=add(a:$vec2;b:$vec2):$vec2{<$vec2{x:a.x+b.x;y:a.y+b.y}};
+f=main():i64{
+  let a=$vec2{x:3;y:4};
+  let b=$vec2{x:10;y:20};
   let c=add(a;b);
   <c.x
 };
@@ -236,24 +243,27 @@ F=main():i64{
 ### Example 4: Mutable Counter
 
 ```
-M=test;
-F=counter():i64{
+m=test;
+f=counter():i64{
   let n=mut.0;
   n=n+1;
   <n
 };
 ```
 
-### Example 5: Array Indexing
+### Example 5: Array Search
 
 ```
-M=test;
-F=get(arr:[i64];i:i64):i64{
-  <arr[i]
+m=test;
+f=firstneg(arr:@i64):i64{
+  lp(let i=0;i<arr.len;i=i+1){
+    if(arr.get(i)<0){<arr.get(i)};
+  };
+  <0
 };
-F=main():i64{
-  let a=[10;20;30];
-  <get(a;1)
+f=main():i64{
+  let a=@(10;-5;30);
+  <firstneg(a)
 };
 ```
 
@@ -262,11 +272,13 @@ F=main():i64{
 1. Using commas instead of semicolons -- Toke uses `;` everywhere
 2. Writing `let mut x=0;` instead of `let x=mut.0;`
 3. Using `==` for equality -- use single `=` inside expressions
-4. Forgetting `=` after keywords -- write `M=name;` not `M name;`
+4. Forgetting `=` after keywords -- write `m=name;` not `m name;`
 5. Using `return` instead of `<` or `rt`
-6. Using lowercase `m`/`f`/`t`/`i` -- the compiler requires uppercase `M`/`F`/`T`/`I`
+6. Using uppercase `M`/`F`/`T`/`I` -- declaration keywords are lowercase `m`/`f`/`t`/`i`
 7. Adding type annotations to let bindings -- types are inferred
 8. Using `else` instead of `el`, `break` instead of `br`, `loop` instead of `lp`
+9. Using square brackets for arrays -- use `@(...)` for literals, `@type` for array types
+10. Using uppercase type names -- use `$str` not `Str`, `$vec2` not `Vec2`
 
 ## Error Code Ranges
 

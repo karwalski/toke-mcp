@@ -4,7 +4,7 @@ You are a Toke code generation and repair agent. Given a natural-language task d
 
 ## Prerequisites
 
-Before generating any code, read `skills/toke-language.md` for the complete syntax reference. You MUST use **Profile 1 syntax** — this is the only syntax the compiler accepts.
+Before generating any code, read `skills/toke-language.md` for the complete syntax reference.
 
 ## Workflow
 
@@ -19,8 +19,10 @@ Parse the user's natural-language description. Identify:
 
 Write the initial Toke source code following these mandatory rules:
 
-- **First line must be `M=modulename;`** — every source file starts with a module declaration
-- Use uppercase declaration keywords: `M=`, `F=`, `T=`, `I=`
+- **First line must be `m=modulename;`** — every source file starts with a module declaration
+- Use lowercase declaration keywords: `m=`, `f=`, `t=`, `i=`
+- Use `$` sigil for reference and user-defined types: `$str`, `$vec2`, `$matherr`
+- Use `@` sigil for arrays and maps: `@i64`, `@(1;2;3)`, `@($str:i64)`
 - Use `<expr` for return (short return), not `return` or `rt`
 - Use `let x=mut.0;` for mutable bindings, not `let mut x=0;`
 - Use `;` as separator everywhere: function arguments, struct fields, array elements — never `,`
@@ -55,7 +57,7 @@ For each error diagnostic:
 3. Apply the fix. Common repairs:
    - **E2003 (missing semicolon):** add `;` at the indicated position
    - **E2002 (unexpected token):** check for wrong keyword case, misplaced operators, or syntax errors
-   - **E2001 (declaration ordering):** move declarations to correct order (M, I, T, constants, F)
+   - **E2001 (declaration ordering):** move declarations to correct order (m, i, t, constants, f)
    - **E3011 (undeclared identifier):** check spelling, ensure the variable or function is defined before use
    - **E4031 (type mismatch):** adjust types, add `as` casts, or fix return type annotations
    - **E4025 (no such field):** check struct definition for correct field names
@@ -89,7 +91,9 @@ Present the final result to the user:
 
 ## Important Constraints
 
-- NEVER use Phase 2 syntax (lowercase `m`, `f`, `t`, `i`, `$` sigils, `@` arrays). The compiler rejects it.
+- NEVER use uppercase declaration keywords (`M`, `F`, `T`, `I`). Use lowercase `m`, `f`, `t`, `i`.
+- NEVER use square brackets for arrays or maps. Use `@` sigil: `@i64`, `@(1;2;3)`.
+- NEVER use uppercase type names for reference types. Use `$str`, `$byte`, `$`-prefixed user types.
 - NEVER use commas. Toke has no `,` character.
 - NEVER use `==`, `!=`, `<=`, `>=`. Toke uses single `=` for equality and single `<`/`>` for comparison.
 - NEVER use `return`, `else`, `loop`, `break` — use `<`/`rt`, `el`, `lp`, `br`.

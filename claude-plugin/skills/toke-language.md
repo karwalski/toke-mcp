@@ -2,21 +2,13 @@
 
 Toke is a compiled, statically typed programming language designed for LLM-optimised code generation. It uses a minimal character set and short keywords to reduce token counts in language model interactions.
 
-**Profile note:** The compiler (`tkc`) currently defaults to **Phase 1** syntax (uppercase declaration keywords, square bracket arrays). Phase 2 (all-lowercase, `$` type sigils, `@` array sigils) is the normative spec target but is not yet implemented in the compiler. This document covers **both profiles**, clearly marking which syntax the compiler accepts today.
-
 ---
 
-## Character Set
+## Character Set — 56 characters
 
-### Phase 1 (compiler default) -- 80 characters
+Lowercase `a-z`, digits `0-9`, symbols `( ) { } = : . ; + - * / < > ! | $ @`, reserved `^ ~`, whitespace (space, tab, newline).
 
-Lowercase `a-z`, uppercase `A-Z`, digits `0-9`, symbols `( ) { } [ ] = : . ; + - * / < > ! | "`, whitespace (space, tab, newline).
-
-### Phase 2 (normative spec) -- 56 characters
-
-Lowercase `a-z`, digits `0-9`, symbols `( ) { } = : . ; + - * / < > ! | $ @`, reserved `^ ~`, whitespace.
-
-Uppercase letters and square brackets are removed in Phase 2. The `$` and `@` sigils are added.
+No uppercase letters. No square brackets. The `$` sigil marks reference and user-defined types. The `@` sigil marks arrays and maps.
 
 ---
 
@@ -24,20 +16,20 @@ Uppercase letters and square brackets are removed in Phase 2. The `$` and `@` si
 
 Toke has 12 keywords. `true` and `false` are predefined identifiers, not keywords.
 
-| Role | Phase 1 (compiler) | Phase 2 (spec) | Description |
-|------|-------------------|----------------|-------------|
-| Module | `M` | `m` | Module declaration |
-| Function | `F` | `f` | Function definition |
-| Type | `T` | `t` | Struct type definition |
-| Import | `I` | `i` | Import declaration |
-| Conditional | `if` | `if` | If branch |
-| Else | `el` | `el` | Else branch |
-| Loop | `lp` | `lp` | Loop statement |
-| Break | `br` | `br` | Break out of loop |
-| Binding | `let` | `let` | Immutable variable binding |
-| Mutable | `mut` | `mut` | Mutable qualifier |
-| Cast | `as` | `as` | Type cast |
-| Return | `rt` | `rt` | Return (long form) |
+| Keyword | Role | Description |
+|---------|------|-------------|
+| `m` | Module | Module declaration |
+| `f` | Function | Function definition |
+| `t` | Type | Struct type definition |
+| `i` | Import | Import declaration |
+| `if` | Conditional | If branch |
+| `el` | Else | Else branch |
+| `lp` | Loop | Loop statement |
+| `br` | Break | Break out of loop |
+| `let` | Binding | Immutable variable binding |
+| `mut` | Mutable | Mutable qualifier |
+| `as` | Cast | Type cast |
+| `rt` | Return | Return (long form) |
 
 The `<` operator is the **short-form return** -- it is the idiomatic way to return values. Both `<expr` and `rt expr` are valid return statements.
 
@@ -45,7 +37,7 @@ The `<` operator is the **short-form return** -- it is the idiomatic way to retu
 
 ## Type System
 
-### Scalar Types (both profiles)
+### Scalar Types
 
 | Type | Description |
 |------|-------------|
@@ -57,59 +49,51 @@ The `<` operator is the **short-form return** -- it is the idiomatic way to retu
 
 ### Reference Types
 
-| Phase 1 (compiler) | Phase 2 (spec) | Description |
-|--------------------|----------------|-------------|
-| `Str` | `$str` | String type |
-| `Byte` | `$byte` | Byte type |
+| Type | Description |
+|------|-------------|
+| `$str` | String type |
+| `$byte` | Byte type |
 
 ### User-Defined Types
 
-| Phase 1 (compiler) | Phase 2 (spec) | Description |
-|--------------------|----------------|-------------|
-| `User` | `$user` | Struct names: uppercase-initial in P1, `$`-prefixed lowercase in P2 |
+User-defined struct names use the `$` sigil with lowercase: `$user`, `$vec2`, `$config`.
 
 ### Collection Types
 
-| Phase 1 (compiler) | Phase 2 (spec) | Description |
-|--------------------|----------------|-------------|
-| `[i64]` | `@i64` | Array of i64 |
-| `[Str:i64]` | `@($str:i64)` | Map from Str to i64 |
+| Type | Description |
+|------|-------------|
+| `@i64` | Array of i64 |
+| `@($str:i64)` | Map from $str to i64 |
 
 ### Error Unions
 
-A function can return a result-or-error type: `i64!MathErr` (Phase 1) or `i64!$matherr` (Phase 2). The `!` after a call expression propagates the error.
+A function can return a result-or-error type: `i64!$matherr`. The `!` after a call expression propagates the error.
 
 ### Pointer Types
 
-`*T` denotes a raw pointer -- used only in FFI (`extern`) function signatures.
+`*$str` denotes a raw pointer -- used only in FFI (`extern`) function signatures.
 
 ---
 
 ## Syntax Reference
-
-All examples below use **Phase 1 syntax** (what the compiler accepts today). Phase 2 equivalents are noted where the syntax differs.
 
 ### Module Declaration
 
 Every source file begins with a module declaration.
 
 ```
-M=mymodule;
+m=mymodule;
 ```
 
-Phase 2: `m=mymodule;`
-
-Dotted paths are allowed: `M=std.math;`
+Dotted paths are allowed: `m=std.math;`
 
 ### Function Declaration
 
 ```
-F=name(param1:type1;param2:type2):returntype{
+f=name(param1:type1;param2:type2):returntype{
   body
 };
 ```
-
-Phase 2: `f=name(...)...`
 
 Parameters are separated by `;` (not `,`). The function body is enclosed in `{}`. A trailing `;` follows the closing `}`.
 
@@ -118,7 +102,7 @@ Parameters are separated by `;` (not `,`). The function body is enclosed in `{}`
 Use `<` (short return) or `rt` (long return):
 
 ```
-F=add(a:i64;b:i64):i64{
+f=add(a:i64;b:i64):i64{
   <a+b
 };
 ```
@@ -166,20 +150,16 @@ Three parts separated by `;`: initialiser, condition, step. Use `br` to break.
 ### Struct (Type) Declaration
 
 ```
-T=Vec2{x:i64;y:i64};
+t=$vec2{x:i64;y:i64};
 ```
-
-Phase 2: `t=$vec2{x:i64;y:i64};`
 
 Fields are separated by `;`. The declaration ends with `;`.
 
 ### Struct Literals
 
 ```
-let v=Vec2{x:3;y:4};
+let v=$vec2{x:3;y:4};
 ```
-
-Phase 2: `let v=$vec2{x:3;y:4};`
 
 ### Field Access
 
@@ -187,26 +167,24 @@ Phase 2: `let v=$vec2{x:3;y:4};`
 let px=v.x;
 ```
 
-Dot notation, same in both profiles.
+Dot notation.
 
 ### Array Literals
 
 ```
-let nums=[10;20;30];
+let nums=@(10;20;30);
 ```
 
-Phase 2: `let nums=@(10;20;30);`
-
-Elements separated by `;`. Empty array: `[]` (P1) or `@()` (P2).
+Elements separated by `;`. Empty array: `@()`.
 
 ### Array Indexing
 
 ```
-let first=arr[0];
-let nth=arr[i];
+let first=arr.0;
+let nth=arr.get(i);
 ```
 
-Phase 2: `let first=arr.0;` (constant) or `let nth=arr.get(i);` (variable).
+Constant index uses dot notation (`arr.0`). Variable index uses `.get(i)`.
 
 ### Array Length
 
@@ -214,22 +192,18 @@ Phase 2: `let first=arr.0;` (constant) or `let nth=arr.get(i);` (variable).
 arr.len
 ```
 
-Same in both profiles.
-
 ### Import Declaration
 
 ```
-I=alias:module.path;
+i=alias:module.path;
 ```
-
-Phase 2: `i=alias:module.path;`
 
 ### Void Functions
 
 Functions that return nothing use `:void`:
 
 ```
-F=greet():void{
+f=greet():void{
   let x=42
 };
 ```
@@ -252,9 +226,9 @@ let y=x as f64;
 ### Error Union Functions
 
 ```
-F=safediv(a:i64;b:i64):i64!MathErr{
+f=safediv(a:i64;b:i64):i64!$matherr{
   if(b=0){
-    <MathErr{msg:"div by zero"}
+    <$matherr{msg:"div by zero"}
   };
   <a/b
 };
@@ -310,7 +284,7 @@ The compiler emits structured JSON diagnostics with numeric error codes:
 | Range | Category | Examples |
 |-------|----------|----------|
 | E1xxx | Lexer | E1001 invalid escape sequence, E1002 unterminated string, E1003 character outside character set |
-| W1xxx | Lexer warnings | W1010 string interpolation not supported in Profile 1 |
+| W1xxx | Lexer warnings | W1010 string interpolation not supported |
 | E2xxx | Parser | E2001 declaration ordering, E2002 unexpected token, E2003 missing semicolon, E2004 unclosed delimiter, E2010 pointer outside extern |
 | E2xxx | Imports | E2030 unresolved import, E2031 circular import, E2035 malformed version, E2036 no compatible version, E2037 version conflict |
 | E3xxx | Name resolution | E3011 identifier not declared, E3012 identifier already declared, E3020 `!` on non-error-union |
@@ -339,11 +313,11 @@ This ordering is enforced by the parser (E2001).
 ### Example 1: Addition function
 
 ```
-M=test;
-F=add(a:i64;b:i64):i64{
+m=test;
+f=add(a:i64;b:i64):i64{
   <a+b
 };
-F=main():i64{
+f=main():i64{
   <add(3;4)
 };
 ```
@@ -351,8 +325,8 @@ F=main():i64{
 ### Example 2: Conditional logic
 
 ```
-M=test;
-F=main():i64{
+m=test;
+f=main():i64{
   let x=5;
   if(x>3){
     <1
@@ -365,12 +339,12 @@ F=main():i64{
 ### Example 3: Struct with field access
 
 ```
-M=test;
-T=Vec2{x:i64;y:i64};
-F=add(a:Vec2;b:Vec2):Vec2{<Vec2{x:a.x+b.x;y:a.y+b.y}};
-F=main():i64{
-  let a=Vec2{x:3;y:4};
-  let b=Vec2{x:10;y:20};
+m=test;
+t=$vec2{x:i64;y:i64};
+f=add(a:$vec2;b:$vec2):$vec2{<$vec2{x:a.x+b.x;y:a.y+b.y}};
+f=main():i64{
+  let a=$vec2{x:3;y:4};
+  let b=$vec2{x:10;y:20};
   let c=add(a;b);
   <c.x
 };
@@ -379,8 +353,8 @@ F=main():i64{
 ### Example 4: Mutable variable and loop
 
 ```
-M=test;
-F=counter():i64{
+m=test;
+f=counter():i64{
   let n=mut.0;
   n=n+1;
   <n
@@ -390,8 +364,8 @@ F=counter():i64{
 ### Example 5: Loop with break
 
 ```
-M=test;
-F=findfive():i64{
+m=test;
+f=findfive():i64{
   lp(let i=0;i<100;i=i+1){
     if(i=5){br};
   };
@@ -402,11 +376,11 @@ F=findfive():i64{
 ### Example 6: Void function and function call
 
 ```
-M=t;
-F=greet():void{
+m=t;
+f=greet():void{
   let x=42
 };
-F=main():i64{
+f=main():i64{
   greet();
   <0
 };
@@ -415,8 +389,8 @@ F=main():i64{
 ### Example 7: Array and loop (searching)
 
 ```
-M=test;
-F=firstneg(arr:[i64]):i64{
+m=test;
+f=firstneg(arr:@i64):i64{
   lp(let i=0;i<arr.len;i=i+1){
     if(arr.get(i)<0){<arr.get(i)};
   };
@@ -434,11 +408,11 @@ F=firstneg(arr:[i64]):i64{
 
 3. **Using `==` for equality.** Toke uses single `=` for both assignment and comparison. Context determines meaning: `if(x=5)` is equality; `x=5;` at statement level is assignment.
 
-4. **Forgetting the `=` after declaration keywords.** Write `M=name;` and `F=func()...` not `M name` or `F func()`. The `=` is part of the declaration syntax.
+4. **Forgetting the `=` after declaration keywords.** Write `m=name;` and `f=func()...` not `m name` or `f func()`. The `=` is part of the declaration syntax.
 
 5. **Wrong return syntax.** Use `<expr` (short return) or `rt expr`. There is no `return` keyword.
 
-6. **Using lowercase `m`/`f`/`t`/`i` with the current compiler.** The compiler currently accepts Phase 1 syntax only: use uppercase `M`, `F`, `T`, `I`.
+6. **Using uppercase `M`/`F`/`T`/`I`.** Declaration keywords are lowercase: `m=`, `f=`, `t=`, `i=`.
 
 7. **Putting the type annotation on let bindings.** `let x=42;` is correct. There is no `let x:i64=42;` form -- types are inferred for local bindings.
 

@@ -5,7 +5,8 @@
 Read `skills/toke-language.md` for the complete Toke language reference before generating or editing any `.tk` file. Key points:
 
 - Toke uses **semicolons everywhere** (arguments, fields, array elements) — never commas
-- The compiler currently accepts **Phase 1 syntax** (uppercase `M`, `F`, `T`, `I`)
+- Declaration keywords are lowercase: `m=`, `f=`, `t=`, `i=`
+- Types use `$` sigil: `$str`, `$vec2`; arrays use `@`: `@i64`, `@(1;2;3)`
 - Short return is `<expr`, not `return expr`
 - Mutable bindings use `let x=mut.0;`, not `let mut x=0;`
 - Equality is single `=` inside expressions: `if(x=5)` — there is no `==`

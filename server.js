@@ -15,6 +15,7 @@ import { tokeSpecLookup } from "./tools/spec.js";
 import { tokeStdlibRef } from "./tools/stdlib.js";
 import { tokeGenerate } from "./tools/generate.js";
 import { tokeBench } from "./tools/bench.js";
+import { tokeCompanion } from "./tools/companion.js";
 
 const require = createRequire(import.meta.url);
 const { checkToolRateLimit, checkConnectionLimit } = require("./lib/rate-limit-middleware");
@@ -37,7 +38,7 @@ try {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a configured MCP server with all 7 toke tools registered.
+ * Create a configured MCP server with all 8 toke tools registered.
  *
  * @param {object} [options]
  * @param {string} [options.name]    - Server name (default: "toke-mcp")
@@ -120,6 +121,19 @@ export function createMcpServer(options = {}) {
     },
     async ({ source, task_id }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeBench({ source, task_id }), null, 2) }],
+    })
+  );
+
+  server.tool(
+    "toke_companion",
+    "Generate, verify, or diff a toke companion file (.tkc.md) skeleton from source code.",
+    {
+      source: z.string().describe("Toke source code"),
+      mode: z.enum(["generate", "verify", "diff"]).optional().describe("Mode: 'generate' (default), 'verify', or 'diff'"),
+      companion: z.string().optional().describe("Existing companion file content (required for verify/diff modes)"),
+    },
+    async ({ source, mode, companion }) => ({
+      content: [{ type: "text", text: JSON.stringify(await tokeCompanion(source, mode, companion), null, 2) }],
     })
   );
 
