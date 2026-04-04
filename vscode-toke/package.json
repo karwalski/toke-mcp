@@ -1,0 +1,76 @@
+{
+  "name": "toke-language",
+  "displayName": "Toke Language Support",
+  "description": "Syntax highlighting, diagnostics, and code intelligence for the Toke programming language",
+  "version": "0.1.0",
+  "publisher": "tokelang",
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:toke"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "toke",
+        "aliases": [
+          "Toke",
+          "toke"
+        ],
+        "extensions": [
+          ".tk"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "toke",
+        "scopeName": "source.toke",
+        "path": "./syntaxes/toke.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "toke",
+        "path": "./snippets/toke.json"
+      }
+    ],
+    "configuration": {
+      "title": "Toke",
+      "properties": {
+        "toke.lsp.path": {
+          "type": "string",
+          "default": "toke-lsp",
+          "description": "Path to the toke-lsp language server binary"
+        },
+        "toke.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Toke language server for diagnostics and code intelligence"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

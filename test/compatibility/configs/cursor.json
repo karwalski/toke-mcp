@@ -1,0 +1,9 @@
+{
+  "_comment": "Cursor — add via Settings > MCP > Add new MCP server, or place in .cursor/mcp.json",
+  "_docs": "https://docs.cursor.com/context/model-context-protocol",
+  "mcpServers": {
+    "toke": {
+      "url": "https://mcp.tokelang.dev/mcp/sse"
+    }
+  }
+}

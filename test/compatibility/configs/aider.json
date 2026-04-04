@@ -1,0 +1,10 @@
+{
+  "_comment": "Aider — MCP support is experimental. Configure via --mcp-server flag or .aider.conf.yml",
+  "_docs": "https://aider.chat/docs/config/mcp.html",
+  "_note": "Aider MCP support requires aider v0.82+ and uses SSE transport",
+  "mcpServers": {
+    "toke": {
+      "url": "https://mcp.tokelang.dev/mcp/sse"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Toke",
+  "scopeName": "source.toke",
+  "patterns": [
+    { "include": "#module-declaration" },
+    { "include": "#function-declaration" },
+    { "include": "#type-declaration" },
+    { "include": "#import-declaration" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#numbers" },
+    { "include": "#strings" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "module-declaration": {
+      "match": "(M)(=)([a-z][a-z0-9]*)",
+      "captures": {
+        "1": { "name": "keyword.control.module.toke" },
+        "2": { "name": "keyword.operator.assignment.toke" },
+        "3": { "name": "entity.name.namespace.toke" }
+      }
+    },
+    "function-declaration": {
+      "match": "(F)(=)([a-z][a-z0-9]*)(\\()",
+      "captures": {
+        "1": { "name": "keyword.control.function.toke" },
+        "2": { "name": "keyword.operator.assignment.toke" },
+        "3": { "name": "entity.name.function.toke" },
+        "4": { "name": "punctuation.paren.open.toke" }
+      }
+    },
+    "type-declaration": {
+      "match": "(T)(=)([A-Z][a-z0-9]*)(\\{)",
+      "captures": {
+        "1": { "name": "keyword.control.type.toke" },
+        "2": { "name": "keyword.operator.assignment.toke" },
+        "3": { "name": "entity.name.type.toke" },
+        "4": { "name": "punctuation.brace.open.toke" }
+      }
+    },
+    "import-declaration": {
+      "match": "(I)(=)([a-z][a-z0-9]*)(:)([a-z][a-z0-9.]*)",
+      "captures": {
+        "1": { "name": "keyword.control.import.toke" },
+        "2": { "name": "keyword.operator.assignment.toke" },
+        "3": { "name": "variable.other.alias.toke" },
+        "4": { "name": "punctuation.separator.toke" },
+        "5": { "name": "string.unquoted.import-path.toke" }
+      }
+    },
+    "keywords": {
+      "match": "\\b(M|F|T|I|let|mut|if|el|lp|match|as)\\b",
+      "name": "keyword.control.toke"
+    },
+    "types": {
+      "match": "\\b(i64|f64|str|bool|void)\\b",
+      "name": "support.type.toke"
+    },
+    "constants": {
+      "match": "\\b(true|false)\\b",
+      "name": "constant.language.toke"
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b0x[0-9a-fA-F]+\\b",
+          "name": "constant.numeric.hex.toke"
+        },
+        {
+          "match": "\\b0b[01]+\\b",
+          "name": "constant.numeric.binary.toke"
+        },
+        {
+          "match": "\\b[0-9]+\\.[0-9]+\\b",
+          "name": "constant.numeric.float.toke"
+        },
+        {
+          "match": "\\b[0-9]+\\b",
+          "name": "constant.numeric.integer.toke"
+        }
+      ]
+    },
+    "strings": {
+      "begin": "\"",
+      "end": "\"",
+      "name": "string.quoted.double.toke",
+      "patterns": [
+        {
+          "match": "\\\\[\\\\\"nrt0]",
+          "name": "constant.character.escape.toke"
+        }
+      ]
+    },
+    "operators": {
+      "match": "[+\\-*/<=>&|!]",
+      "name": "keyword.operator.toke"
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": ";",
+          "name": "punctuation.terminator.toke"
+        },
+        {
+          "match": "[{}]",
+          "name": "punctuation.brace.toke"
+        },
+        {
+          "match": "[()]",
+          "name": "punctuation.paren.toke"
+        },
+        {
+          "match": "[\\[\\]]",
+          "name": "punctuation.bracket.toke"
+        }
+      ]
+    }
+  }
+}

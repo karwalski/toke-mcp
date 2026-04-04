@@ -1,0 +1,15 @@
+services:
+  toke-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.selfhosted
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

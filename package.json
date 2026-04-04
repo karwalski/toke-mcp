@@ -1,0 +1,50 @@
+{
+  "name": "@tokelang/mcp-server",
+  "version": "0.1.0",
+  "description": "Self-hostable MCP server for the Toke programming language",
+  "type": "module",
+  "main": "server.js",
+  "bin": {
+    "toke-mcp": "./bin/toke-mcp.js"
+  },
+  "files": [
+    "server.js",
+    "tools/",
+    "lib/",
+    "skills/",
+    "bin/"
+  ],
+  "scripts": {
+    "start": "node server.js",
+    "prepublishOnly": "node bin/toke-mcp.js --help"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "express": "^5.1.0"
+  },
+  "optionalDependencies": {
+    "ioredis": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "toke",
+    "mcp",
+    "language-server",
+    "compiler",
+    "code-generation"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karwalski/toke-mcp.git"
+  },
+  "homepage": "https://tokelang.dev",
+  "bugs": {
+    "url": "https://github.com/karwalski/toke-mcp/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "Apache-2.0"
+}

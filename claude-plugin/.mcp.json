@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "toke": {
+      "url": "https://mcp.tokelang.dev/mcp/sse"
+    }
+  }
+}

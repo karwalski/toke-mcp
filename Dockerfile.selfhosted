@@ -1,0 +1,65 @@
+# Dockerfile.selfhosted — Self-contained Docker image for the toke MCP server.
+#
+# Multi-stage build:
+#   Stage 1 (builder): install Node.js dependencies
+#   Stage 2 (runtime): slim image with server code + tkc binary
+#
+# Build:
+#   docker build -f Dockerfile.selfhosted -t toke-mcp .
+#
+# The tkc binary must be present in the build context (project root).
+# Copy it there before building:
+#   cp ~/tk/tkc/tkc ./tkc
+
+# =============================================================================
+# Stage 1: Builder — install production dependencies
+# =============================================================================
+FROM node:20-slim AS builder
+
+WORKDIR /build
+
+COPY package.json package-lock.json* ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# =============================================================================
+# Stage 2: Runtime — slim image with server + tkc
+# =============================================================================
+FROM node:20-slim
+
+# Install curl for health check, then clean up
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+WORKDIR /app
+
+# Copy tkc binary
+COPY tkc /usr/local/bin/tkc
+RUN chmod +x /usr/local/bin/tkc
+
+# Copy production node_modules from builder
+COPY --from=builder /build/node_modules ./node_modules
+
+# Copy application code
+COPY package.json ./
+COPY server.js ./
+COPY tools/ ./tools/
+COPY skills/ ./skills/
+
+# Environment configuration
+ENV PORT=3000
+ENV TKC_PATH=/usr/local/bin/tkc
+ENV LOG_LEVEL=info
+ENV NODE_ENV=production
+
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Run as non-root user (node user is uid 1000, provided by the node base image)
+USER node
+
+CMD ["node", "server.js"]

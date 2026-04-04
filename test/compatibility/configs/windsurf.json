@@ -1,0 +1,9 @@
+{
+  "_comment": "Windsurf (Codeium) — add via Windsurf Settings > MCP, or place in ~/.codeium/windsurf/mcp_config.json",
+  "_docs": "https://docs.windsurf.com/windsurf/mcp",
+  "mcpServers": {
+    "toke": {
+      "serverUrl": "https://mcp.tokelang.dev/mcp/sse"
+    }
+  }
+}

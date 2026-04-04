@@ -1,0 +1,11 @@
+{
+  "name": "toke-lsp",
+  "version": "0.1.0",
+  "description": "Language Server Protocol implementation for Toke",
+  "main": "server.js",
+  "bin": { "toke-lsp": "server.js" },
+  "dependencies": {
+    "vscode-languageserver": "^9.0.0",
+    "vscode-languageserver-textdocument": "^1.0.0"
+  }
+}

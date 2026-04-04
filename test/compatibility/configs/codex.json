@@ -1,0 +1,10 @@
+{
+  "_comment": "OpenAI Codex CLI — place as mcp.json in your project root",
+  "_docs": "https://github.com/openai/codex",
+  "mcpServers": {
+    "toke": {
+      "type": "sse",
+      "url": "https://mcp.tokelang.dev/mcp/sse"
+    }
+  }
+}

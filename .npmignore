@@ -1,0 +1,29 @@
+# Directories not needed in the npm package
+test/
+infra/
+sandbox/
+docs/
+claude-plugin/
+codex/
+vscode-toke/
+lsp/
+lambda/
+model/
+scripts/
+
+# Docker files
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+
+# Shell scripts (bin/ is included via files array)
+*.sh
+
+# Development and documentation files
+.env
+.env.*
+.git/
+.github/
+.npmrc
+SECURITY.md
+SELF_HOSTED.md

@@ -1,0 +1,9 @@
+{
+  "_comment": "Claude Code — place as .mcp.json in your project root or ~/.claude/.mcp.json for global access",
+  "_docs": "https://docs.anthropic.com/en/docs/claude-code/mcp",
+  "mcpServers": {
+    "toke": {
+      "url": "https://mcp.tokelang.dev/mcp/sse"
+    }
+  }
+}

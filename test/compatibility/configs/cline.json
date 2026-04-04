@@ -1,0 +1,10 @@
+{
+  "_comment": "Cline (VS Code extension) — add via Cline MCP settings panel or cline_mcp_settings.json",
+  "_docs": "https://docs.cline.bot/mcp-servers/configuring-mcp-servers",
+  "mcpServers": {
+    "toke": {
+      "url": "https://mcp.tokelang.dev/mcp/sse",
+      "transportType": "sse"
+    }
+  }
+}
