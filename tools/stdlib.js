@@ -1,7 +1,7 @@
 /**
  * toke_stdlib_ref — look up toke standard library module and function info.
  * Pure reference tool, no compilation.  All data is built-in from the
- * normative signatures in toke-spec/spec/stdlib-signatures.md.
+ * normative signatures in toke/spec/stdlib-signatures.md.
  */
 
 const STDLIB = {

@@ -24,7 +24,7 @@ import { tokeCheck } from "../tools/check.js";
 import { tokeCompile } from "../tools/compile.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BENCHMARK_DIR = join(__dirname, "../../toke-benchmark/hidden_tests");
+const BENCHMARK_DIR = join(__dirname, "../../toke-eval/benchmark/hidden_tests");
 const RESULTS_PATH = join(__dirname, "data/e2e_results.json");
 
 // ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ function parseArgs() {
 }
 
 // ---------------------------------------------------------------------------
-// Task loading — reads YAML task files from toke-benchmark/hidden_tests/
+// Task loading — reads YAML task files from toke-eval/benchmark/hidden_tests/
 // ---------------------------------------------------------------------------
 
 async function loadTasks(count) {

@@ -1,5 +1,5 @@
 /**
- * yaml_mini.js — Minimal YAML parser for toke-benchmark task files.
+ * yaml_mini.js — Minimal YAML parser for toke-eval benchmark task files.
  *
  * Only handles the subset of YAML used by task-a-NNNN.yaml files:
  *   - Top-level scalar fields (key: value)
