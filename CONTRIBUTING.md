@@ -1,4 +1,4 @@
-# Contributing to toke-cloud
+# Contributing to toke-mcp
 
 Thank you for your interest in contributing to the Toke MCP server. This guide covers local setup, testing, code style, and how to add new tools.
 
@@ -8,8 +8,8 @@ Thank you for your interest in contributing to the Toke MCP server. This guide c
 
 2. **Clone and install:**
    ```bash
-   git clone https://github.com/tokelang/toke-cloud.git
-   cd toke-cloud
+   git clone https://github.com/karwalski/toke-mcp.git
+   cd toke-mcp
    npm install
    ```
 

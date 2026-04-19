@@ -34,9 +34,10 @@ extended timeline before the deadline passes.
 
 ### In scope
 
-- Cloud infrastructure configuration and deployment scripts
-- Authentication and authorization mechanisms
-- Secret management and credential handling
+- MCP server transport and session management
+- Rate limiting and connection controls
+- Tool execution and input validation
+- Docker and self-hosted deployment configuration
 
 ### Out of scope
 

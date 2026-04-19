@@ -4,13 +4,21 @@
   "description": "Syntax highlighting, diagnostics, and code intelligence for the Toke programming language",
   "version": "0.1.0",
   "publisher": "tokelang",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karwalski/toke-mcp.git",
+    "directory": "vscode-toke"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Linters",
+    "Snippets"
   ],
+  "icon": "images/toke-icon.png",
   "activationEvents": [
     "onLanguage:toke"
   ],

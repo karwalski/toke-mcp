@@ -48,4 +48,12 @@ To change the LSP binary path, set `toke.lsp.path` in VS Code settings. To disab
 | `toke.lsp.path`  | `toke-lsp`  | Path to the toke-lsp binary          |
 | `toke.lsp.enabled` | `true`   | Enable the Toke language server      |
 
-<!-- Screenshots: TODO -->
+## Screenshots
+
+<!-- TODO: Add screenshots before publishing to VS Code Marketplace.
+     Required images (place in vscode-toke/images/):
+     - toke-icon.png (128x128, extension icon)
+     - screenshot-highlighting.png (syntax highlighting demo)
+     - screenshot-diagnostics.png (LSP diagnostics demo)
+     - screenshot-snippets.png (snippet expansion demo)
+-->

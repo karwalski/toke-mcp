@@ -1,4 +1,6 @@
-# toke-lsp
+# @tokelang/lsp-server
+
+[![npm](https://img.shields.io/npm/v/@tokelang/lsp-server)](https://www.npmjs.com/package/@tokelang/lsp-server)
 
 Language Server Protocol implementation for the Toke programming language. Wraps the `tkc` compiler to provide real-time diagnostics, hover information, and document symbols.
 
@@ -14,6 +16,18 @@ Language Server Protocol implementation for the Toke programming language. Wraps
 - `tkc` compiler on PATH (or configure a custom path)
 
 ## Install
+
+```bash
+npm install -g @tokelang/lsp-server
+```
+
+Or run directly:
+
+```bash
+npx @tokelang/lsp-server
+```
+
+For development:
 
 ```sh
 cd lsp/

@@ -18,22 +18,22 @@ A Claude Code plugin that provides Toke language support via the hosted MCP serv
 Clone the repository and add the plugin path to your Claude Code project configuration:
 
 ```bash
-git clone git@github.com:karwalski/toke-cloud.git
+git clone git@github.com:karwalski/toke-mcp.git
 ```
 
 Then in your project's `.claude/settings.json`, add the plugin directory as a project path, or copy the contents of `claude-plugin/` into your project's `.claude/` directory:
 
 ```bash
-cp toke-cloud/claude-plugin/.mcp.json .mcp.json
-cp toke-cloud/claude-plugin/CLAUDE.md CLAUDE.md
-cp -r toke-cloud/claude-plugin/skills/ skills/
-cp -r toke-cloud/claude-plugin/commands/ commands/
+cp toke-mcp/claude-plugin/.mcp.json .mcp.json
+cp toke-mcp/claude-plugin/CLAUDE.md CLAUDE.md
+cp -r toke-mcp/claude-plugin/skills/ skills/
+cp -r toke-mcp/claude-plugin/commands/ commands/
 ```
 
 ### Option 2: Work directly from the plugin directory
 
 ```bash
-cd toke-cloud/claude-plugin
+cd toke-mcp/claude-plugin
 claude
 ```
 

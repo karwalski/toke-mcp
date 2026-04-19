@@ -19,6 +19,8 @@ import { tokeCompanion } from "./tools/companion.js";
 import { tokeCompress, tokeDecompress } from "./tools/compress.js";
 import { tokeAnalyse } from "./tools/analyse.js";
 import { tokeRender } from "./tools/render.js";
+import { tokeFormat } from "./tools/format.js";
+import { tokeMigrate } from "./tools/migrate.js";
 
 const require = createRequire(import.meta.url);
 const { checkToolRateLimit, checkConnectionLimit } = require("./lib/rate-limit-middleware");
@@ -41,7 +43,7 @@ try {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a configured MCP server with all 12 toke tools registered.
+ * Create a configured MCP server with all 14 toke tools registered.
  *
  * @param {object} [options]
  * @param {string} [options.name]    - Server name (default: "toke-mcp")
@@ -137,6 +139,24 @@ export function createMcpServer(options = {}) {
     },
     async ({ source, mode, companion }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeCompanion(source, mode, companion), null, 2) }],
+    })
+  );
+
+  server.tool(
+    "toke_format",
+    "Auto-format toke source code. Tries tkc --fmt first, falls back to a JS-based formatter that normalises indentation, spacing, semicolons, and blank lines.",
+    { source: z.string().describe("Toke source code to format") },
+    async ({ source }) => ({
+      content: [{ type: "text", text: JSON.stringify(await tokeFormat(source), null, 2) }],
+    })
+  );
+
+  server.tool(
+    "toke_migrate",
+    "Migrate legacy 80-char syntax toke code to the 56-char default syntax using tkc --migrate.",
+    { source: z.string().describe("Legacy 80-char syntax toke source code to migrate") },
+    async ({ source }) => ({
+      content: [{ type: "text", text: JSON.stringify(await tokeMigrate(source), null, 2) }],
     })
   );
 
