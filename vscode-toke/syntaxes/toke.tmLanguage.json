@@ -17,7 +17,7 @@
   ],
   "repository": {
     "module-declaration": {
-      "match": "(M)(=)([a-z][a-z0-9]*)",
+      "match": "(m)(=)([a-z][a-z0-9]*)",
       "captures": {
         "1": { "name": "keyword.control.module.toke" },
         "2": { "name": "keyword.operator.assignment.toke" },
@@ -25,7 +25,7 @@
       }
     },
     "function-declaration": {
-      "match": "(F)(=)([a-z][a-z0-9]*)(\\()",
+      "match": "(f)(=)([a-z][a-z0-9]*)(\\()",
       "captures": {
         "1": { "name": "keyword.control.function.toke" },
         "2": { "name": "keyword.operator.assignment.toke" },
@@ -34,7 +34,7 @@
       }
     },
     "type-declaration": {
-      "match": "(T)(=)([A-Z][a-z0-9]*)(\\{)",
+      "match": "(t)(=)(\\$[a-z][a-z0-9]*)(\\{)",
       "captures": {
         "1": { "name": "keyword.control.type.toke" },
         "2": { "name": "keyword.operator.assignment.toke" },
@@ -43,7 +43,7 @@
       }
     },
     "import-declaration": {
-      "match": "(I)(=)([a-z][a-z0-9]*)(:)([a-z][a-z0-9.]*)",
+      "match": "(i)(=)([a-z][a-z0-9]*)(:)([a-z][a-z0-9.]*)",
       "captures": {
         "1": { "name": "keyword.control.import.toke" },
         "2": { "name": "keyword.operator.assignment.toke" },
@@ -53,7 +53,7 @@
       }
     },
     "keywords": {
-      "match": "\\b(M|F|T|I|let|mut|if|el|lp|match|as)\\b",
+      "match": "\\b(m|f|t|i|let|mut|if|el|lp|br|mt|rt|as)\\b",
       "name": "keyword.control.toke"
     },
     "types": {
@@ -114,8 +114,8 @@
           "name": "punctuation.paren.toke"
         },
         {
-          "match": "[\\[\\]]",
-          "name": "punctuation.bracket.toke"
+          "match": "@\\(",
+          "name": "punctuation.array.toke"
         }
       ]
     }

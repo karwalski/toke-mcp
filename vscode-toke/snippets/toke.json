@@ -2,14 +2,14 @@
   "Module declaration": {
     "prefix": "mod",
     "body": [
-      "M=${1:name};"
+      "m=${1:name};"
     ],
     "description": "Declare a module"
   },
   "Function declaration": {
     "prefix": "fn",
     "body": [
-      "F=${1:name}(${2:params}):${3:ret}{",
+      "f=${1:name}(${2:params}):${3:ret}{",
       "\t$0",
       "}"
     ],
@@ -18,7 +18,7 @@
   "Type declaration": {
     "prefix": "st",
     "body": [
-      "T=${1:Name}{",
+      "t=${1:Name}{",
       "\t${2:field}:${3:type}",
       "}"
     ],
@@ -27,7 +27,7 @@
   "Import": {
     "prefix": "imp",
     "body": [
-      "I=${1:alias}:${2:path};"
+      "i=${1:alias}:${2:path};"
     ],
     "description": "Import a module"
   },
@@ -68,9 +68,9 @@
   "Main function": {
     "prefix": "main",
     "body": [
-      "M=${1:main};",
+      "m=${1:main};",
       "",
-      "F=main():i64{",
+      "f=main():i64{",
       "\t$0",
       "\t0",
       "}"

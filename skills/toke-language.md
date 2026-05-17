@@ -4,17 +4,17 @@ Toke is a compiled, statically typed programming language designed for LLM-optim
 
 ---
 
-## Character Set — 56 characters
+## Character Set — 55 characters
 
-Lowercase `a-z`, digits `0-9`, symbols `( ) { } = : . ; + - * / < > ! | $ @`, reserved `^ ~`, whitespace (space, tab, newline).
+Lowercase `a-z`, digits `0-9`, symbols `( ) { } = : . ; + - * / < > ! | $ @ %`.
 
-No uppercase letters. No square brackets. The `$` sigil marks reference and user-defined types. The `@` sigil marks arrays and maps.
+No uppercase letters. No square brackets. No underscores. The `$` sigil marks reference and user-defined types. The `@` sigil marks arrays and maps. The `&` prefix is used for function references (`&name`). Bitwise operators (`^`, `~`) are deferred to v0.5+.
 
 ---
 
 ## Keywords
 
-Toke has 12 keywords. `true` and `false` are predefined identifiers, not keywords.
+Toke has 13 keywords. `true` and `false` are predefined identifiers, not keywords.
 
 | Keyword | Role | Description |
 |---------|------|-------------|
@@ -30,6 +30,7 @@ Toke has 12 keywords. `true` and `false` are predefined identifiers, not keyword
 | `mut` | Mutable | Mutable qualifier |
 | `as` | Cast | Type cast |
 | `rt` | Return | Return (long form) |
+| `mt` | Match | Match expression |
 
 The `<` operator is the **short-form return** -- it is the idiomatic way to return values. Both `<expr` and `rt expr` are valid return statements.
 

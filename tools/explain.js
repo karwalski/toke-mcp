@@ -12,7 +12,7 @@ const ERROR_CATALOG = {
     message:
       "A backslash in a string literal is followed by a character that is not one of \", \\, n, t, r, 0, x, or (. Also emitted when \\x is not followed by exactly two hex digits.",
     fix: "Use only recognised escape sequences: \\\", \\\\, \\n, \\t, \\r, \\0, \\xNN. Remove or replace the invalid escape.",
-    example: 'M=test;\nF=bad():Str{<"\\q"};',
+    example: 'm=test;\nf=bad():Str{<"\\q"};',
   },
   E1002: {
     stage: "lex",
@@ -21,7 +21,7 @@ const ERROR_CATALOG = {
     message:
       "The lexer reached end-of-input before finding a closing double-quote for a string literal.",
     fix: "Add a closing \" to terminate the string literal.",
-    example: 'M=test;\nF=bad():Str{<"unterminated};',
+    example: 'm=test;\nf=bad():Str{<"unterminated};',
   },
   E1003: {
     stage: "lex",
@@ -30,7 +30,7 @@ const ERROR_CATALOG = {
     message:
       "A character that is not in the 80-character Profile 1 set was found in a structural position. Only a-z, A-Z, 0-9, and (){}[]=:.;+-*/<>!| are permitted outside string literals.",
     fix: "Remove or replace the offending character. Non-ASCII and symbols like @, #, $, %, ^, &, ~ are not allowed in structural positions.",
-    example: "M=test;\nF=bad():i64{<1£};",
+    example: "m=test;\nf=bad():i64{<1£};",
   },
   E1004: {
     stage: "lex",
@@ -39,7 +39,7 @@ const ERROR_CATALOG = {
     message:
       "A token starting with a digit is not a valid numeric literal and cannot be used as an identifier.",
     fix: "Identifiers must begin with a letter (a-z or A-Z). Rename the identifier so it starts with a letter, e.g. 'x3' instead of '3x'.",
-    example: "M=test;\nF=bad():i64{let 3x=1;<3x};",
+    example: "m=test;\nf=bad():i64{let 3x=1;<3x};",
   },
   E1005: {
     stage: "lex",
@@ -55,7 +55,7 @@ const ERROR_CATALOG = {
     message:
       "The reserved literals 'true' and 'false' cannot be used as identifiers (e.g. variable names).",
     fix: "Choose a different identifier name. 'true' and 'false' are predefined boolean literals.",
-    example: "M=test;\nF=bad():i64{let true=1;<true};",
+    example: "m=test;\nf=bad():i64{let true=1;<true};",
   },
 
   // ── Warnings (W1xxx) ────────────────────────────────────────────────
@@ -74,7 +74,7 @@ const ERROR_CATALOG = {
     message:
       "The \\( sequence inside a string literal is not supported in Profile 1.",
     fix: "Use str.concat() for string composition instead of \\(expr) interpolation.",
-    example: 'M=test;\nF=interp():Str{<"hello \\(name)"};',
+    example: 'm=test;\nf=interp():Str{<"hello \\(name)"};',
   },
 
   // ── Parser errors (2xxx) ────────────────────────────────────────────
@@ -83,9 +83,9 @@ const ERROR_CATALOG = {
     severity: "error",
     title: "Declaration ordering violation",
     message:
-      "toke source files must follow the order: M (module), I (import), T (type), constants, F (function). A declaration appeared out of order or M= is missing.",
-    fix: "Reorder declarations to follow M > I > T > constants > F. Ensure M= appears first.",
-    example: "F=bad():i64{<0};",
+      "toke source files must follow the order: m (module), i (import), t (type), constants, f (function). A declaration appeared out of order or m= is missing.",
+    fix: "Reorder declarations to follow m > i > t > constants > f. Ensure m= appears first.",
+    example: "f=bad():i64{<0};",
   },
   E2002: {
     stage: "parse",
@@ -94,7 +94,7 @@ const ERROR_CATALOG = {
     message:
       "The parser encountered a token it cannot consume in the current grammatical context.",
     fix: "Check the surrounding syntax. Common causes: missing operator, extra symbol, or misplaced keyword.",
-    example: "M=test;\nF=bad():i64{<1 @};",
+    example: "m=test;\nf=bad():i64{<1 @};",
   },
   E2003: {
     stage: "parse",
@@ -103,7 +103,7 @@ const ERROR_CATALOG = {
     message:
       "A semicolon was expected between statements. Semicolons may be elided before } or EOF, but are required between consecutive statements.",
     fix: "Add a semicolon between the statements.",
-    example: "M=test;\nF=bad():i64{let x=1 let y=2;<x};",
+    example: "m=test;\nf=bad():i64{let x=1 let y=2;<x};",
   },
   E2004: {
     stage: "parse",
@@ -112,7 +112,7 @@ const ERROR_CATALOG = {
     message:
       "An opening (, [, or { was not matched by a closing ), ], or } before EOF.",
     fix: "Add the matching closing delimiter.",
-    example: "M=test;\nF=bad():i64{<(1+2};",
+    example: "m=test;\nf=bad():i64{<(1+2};",
   },
   E2005: {
     stage: "parse",
@@ -120,15 +120,15 @@ const ERROR_CATALOG = {
     title: "Duplicate module path across source files",
     message:
       "Two or more source files declare the same module path. Each module path must be unique within a compilation unit.",
-    fix: "Rename one of the conflicting module declarations so each file has a unique M= path.",
+    fix: "Rename one of the conflicting module declarations so each file has a unique m= path.",
   },
   E2006: {
     stage: "parse",
     severity: "error",
     title: "Wildcard import attempted",
     message:
-      "toke does not support wildcard imports (e.g. I=*:std). All imports must be explicitly named.",
-    fix: "Replace the wildcard with explicit named imports, e.g. I=str:std.str;",
+      "toke does not support wildcard imports (e.g. i=*:std). All imports must be explicitly named.",
+    fix: "Replace the wildcard with explicit named imports, e.g. i=str:std.str;",
   },
   E2010: {
     stage: "type_check",
@@ -137,7 +137,7 @@ const ERROR_CATALOG = {
     message:
       "Pointer types (*T) are only valid in extern (bodyless) function signatures for FFI declarations.",
     fix: "Remove the pointer type from the function signature. Use Str or Byte for data passing in non-extern functions.",
-    example: "M=test;\nF=bad(s:*u8):i64{<42};",
+    example: "m=test;\nf=bad(s:*u8):i64{<42};",
   },
   E2011: {
     stage: "parse",
@@ -146,7 +146,7 @@ const ERROR_CATALOG = {
     message:
       "A type declaration must have either all-lowercase fields (struct) or all-uppercase-initial fields (sum type). Mixing is not allowed.",
     fix: "Separate into two type declarations, or ensure all fields follow the same convention.",
-    example: "M=test;\nT=Bad{name:Str;NotFound:bool};",
+    example: "m=test;\nt=Bad{name:Str;NotFound:bool};",
   },
   E2015: {
     stage: "parse",
@@ -161,7 +161,7 @@ const ERROR_CATALOG = {
     severity: "error",
     title: "Unresolved import",
     message:
-      "The module path in an I= declaration does not resolve to any .tki interface file on the search path.",
+      "The module path in an i= declaration does not resolve to any .tki interface file on the search path.",
     fix: "Check the module path spelling. Ensure the imported module is compiled and its .tki file is on the search path.",
   },
   E2031: {
@@ -178,8 +178,8 @@ const ERROR_CATALOG = {
     title: "Malformed version string in import",
     message:
       "The version string in an import declaration does not match MAJOR.MINOR or MAJOR.MINOR.PATCH format.",
-    fix: 'Use a valid version string, e.g. I=io:std.io "1.0";',
-    example: 'M=test;\nI=io:std.io "abc";\nF=noop():bool{<true};',
+    fix: 'Use a valid version string, e.g. i=io:std.io "1.0";',
+    example: 'm=test;\ni=io:std.io "abc";\nf=noop():bool{<true};',
   },
   E2036: {
     stage: "name_resolution",
@@ -205,8 +205,8 @@ const ERROR_CATALOG = {
     title: "Identifier not declared",
     message:
       "A reference to an identifier that does not exist in any enclosing scope.",
-    fix: "Check the spelling. Ensure the variable or function is declared before use, or imported via I=.",
-    example: "M=test;\nF=bad():i64{<x};",
+    fix: "Check the spelling. Ensure the variable or function is declared before use, or imported via i=.",
+    example: "m=test;\nf=bad():i64{<x};",
   },
   E3012: {
     stage: "name_resolution",
@@ -215,7 +215,7 @@ const ERROR_CATALOG = {
     message:
       "A second declaration of the same name in the same scope. Shadowing across scope boundaries is allowed; duplicate declaration within one scope is not.",
     fix: "Rename one of the declarations, or remove the duplicate.",
-    example: "M=test;\nF=bad():i64{let x=1;let x=2;<x};",
+    example: "m=test;\nf=bad():i64{let x=1;let x=2;<x};",
   },
   E3020: {
     stage: "type_check",
@@ -234,7 +234,7 @@ const ERROR_CATALOG = {
     message:
       "The condition expression in an if or lp construct must evaluate to type bool. No implicit truthiness conversion is performed.",
     fix: "Use an explicit comparison, e.g. 'if(x>0)' instead of 'if(x)'.",
-    example: "M=test;\nF=bad():i64{if 1{<1}el{<0}};",
+    example: "m=test;\nf=bad():i64{if 1{<1}el{<0}};",
   },
   E4010: {
     stage: "type_check",
@@ -243,7 +243,7 @@ const ERROR_CATALOG = {
     message:
       "A match expression does not cover all variants of the matched type. All variants must have a corresponding arm.",
     fix: "Add the missing match arm(s) for all variants.",
-    example: "M=test;\nF=bad():i64{match true{true=>{<1}}};",
+    example: "m=test;\nf=bad():i64{mt true{true=>{<1}}};",
   },
   E4011: {
     stage: "type_check",
@@ -260,7 +260,7 @@ const ERROR_CATALOG = {
     message:
       "A function call passes an argument whose type does not match the declared parameter type.",
     fix: "Pass a value of the correct type, or use 'as' to cast explicitly.",
-    example: 'M=test;\nF=inc(x:i64):i64{<x+1};\nF=bad():i64{<inc("hello")};',
+    example: 'm=test;\nf=inc(x:i64):i64{<x+1};\nf=bad():i64{<inc("hello")};',
   },
   E4021: {
     stage: "type_check",
@@ -269,7 +269,7 @@ const ERROR_CATALOG = {
     message:
       "The expression in a return statement does not match the function's declared return type.",
     fix: "Change the return expression to match the declared return type, or update the function signature.",
-    example: 'M=test;\nF=bad():i64{<"hello"};',
+    example: 'm=test;\nf=bad():i64{<"hello"};',
   },
   E4025: {
     stage: "type_check",
@@ -286,7 +286,7 @@ const ERROR_CATALOG = {
     message:
       "Array indexing requires the index expression to be an integer type. Using a non-integer type is a compile error.",
     fix: "Use an integer expression as the array index, e.g. a[0] or a[i] where i is i64/u64.",
-    example: 'M=test;\nF=bad():i64{let a=[1;2;3];<a["x"]};',
+    example: 'm=test;\nf=bad():i64{let a=@(1;2;3);<a["x"]};',
   },
   E4031: {
     stage: "type_check",
@@ -327,7 +327,7 @@ const ERROR_CATALOG = {
     message:
       "All entries in a map literal must have the same key type and the same value type. The first entry establishes the expected types.",
     fix: "Ensure all map entries use consistent key and value types.",
-    example: 'M=test;\nF=bad():i64{<[1:10; 2:"x"]};',
+    example: 'm=test;\nf=bad():i64{<[1:10; 2:"x"]};',
   },
   E4050: {
     stage: "type_check",
@@ -344,7 +344,7 @@ const ERROR_CATALOG = {
     message:
       "await(t) requires its argument to have type Task<T>. Passing a value of any other type emits this error.",
     fix: "Ensure the argument to await() is the result of a spawn() call.",
-    example: "M=test;\nF=notask():i64{<42};\nF=main():i64{<await(notask())};",
+    example: "m=test;\nf=notask():i64{<42};\nf=main():i64{<await(notask())};",
   },
   E4052: {
     stage: "type_check",
@@ -371,7 +371,7 @@ const ERROR_CATALOG = {
     message:
       "Inside an {arena ...} block, assigning to a variable declared in an outer scope would cause a dangling reference when the arena is freed.",
     fix: "Do not assign arena-allocated values to variables declared outside the arena block. Copy the data you need before the arena exits.",
-    example: "M=test;\nF=bad():i64{let x=0;{arena x=1};<x};",
+    example: "m=test;\nf=bad():i64{let x=0;{arena x=1};<x};",
   },
   E5002: {
     stage: "arena_check",

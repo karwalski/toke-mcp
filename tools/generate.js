@@ -13,7 +13,7 @@ function buildPrompt(description, difficulty) {
     ? `\nDifficulty level: ${difficulty}.`
     : "";
 
-  return `You are an expert in the Toke programming language. Toke is a statically-typed, compiled language with type sigils ($string, %int, @float, !bool), pattern matching, pipe operators, and a concise syntax.
+  return `You are an expert in the Toke programming language. Toke is a statically-typed, compiled language with a 55-character alphabet. Keywords: m (module), f (function), t (type), i (import), if/el, lp/br, let/mut, mt (match), rt (return). Types use $ prefix ($str, $vec2). Arrays use @() syntax. All values are i64 at the ABI level.
 
 Generate valid Toke source code for the following task:
 ${description}${difficultyHint}

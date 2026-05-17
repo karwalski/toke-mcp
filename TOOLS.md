@@ -114,4 +114,4 @@ The following tools are registered in the server but do not have frozen API guar
 | `toke_bench` | Benchmark Toke code against known tasks |
 | `toke_companion` | Generate/verify/diff `.tkc.md` companion files |
 | `toke_format` | Auto-format toke source code |
-| `toke_migrate` | Migrate legacy 80-char syntax to 56-char default syntax |
+| `toke_migrate` | Migrate legacy 80-char syntax to 55-char default syntax |

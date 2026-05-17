@@ -43,16 +43,17 @@ let tkcStdlib  = '';
 /* ── Keyword descriptions for hover ───────────────────────────────── */
 
 const KEYWORD_INFO = {
-  M:     'M — module declaration. Declares the module name for this file.',
-  F:     'F — function declaration. Defines a named function.',
-  T:     'T — struct declaration. Defines a named struct type.',
-  I:     'I — import declaration. Imports a module by alias.',
+  m:     'm — module declaration. Declares the module name for this file.',
+  f:     'f — function declaration. Defines a named function.',
+  t:     't — struct declaration. Defines a named struct type.',
+  i:     'i — import declaration. Imports a module by alias.',
   let:   'let — immutable binding. Binds a value that cannot be reassigned.',
   mut:   'mut — mutable binding. Binds a value that can be reassigned.',
   lp:    'lp — loop. Repeats the body until broken.',
+  br:    'br — break. Exits the enclosing loop.',
   if:    'if — conditional. Executes the body when the condition is true.',
   el:    'el — else branch. Executes when the preceding if-condition is false.',
-  match: 'match — pattern match. Dispatches on the value of an expression.',
+  mt:    'mt — pattern match. Dispatches on the value of an expression.',
   as:    'as — type cast. Converts a value to a different type.',
   rt:    'rt — return. Returns a value from the enclosing function.',
 };
@@ -187,13 +188,13 @@ const STDLIB_FUNCTIONS = {
     { name: 'lower',       signature: 'str.lower(s $str) -> $str',                        doc: 'Convert all characters to lowercase.' },
     { name: 'contains',    signature: 'str.contains(s $str, sub $str) -> $bool',          doc: 'Check whether a string contains a substring.' },
     { name: 'replace',     signature: 'str.replace(s $str, old $str, new $str) -> $str',  doc: 'Replace all occurrences of old with new.' },
-    { name: 'starts_with', signature: 'str.starts_with(s $str, prefix $str) -> $bool',    doc: 'Check whether a string starts with prefix.' },
-    { name: 'ends_with',   signature: 'str.ends_with(s $str, suffix $str) -> $bool',      doc: 'Check whether a string ends with suffix.' },
+    { name: 'startswith', signature: 'str.startswith(s $str, prefix $str) -> $bool',    doc: 'Check whether a string starts with prefix.' },
+    { name: 'endswith',   signature: 'str.endswith(s $str, suffix $str) -> $bool',      doc: 'Check whether a string ends with suffix.' },
     { name: 'len',         signature: 'str.len(s $str) -> $int',                          doc: 'Return the length of a string in bytes.' },
     { name: 'slice',       signature: 'str.slice(s $str, start $int, end $int) -> $str',  doc: 'Return a substring from start to end index.' },
     { name: 'repeat',      signature: 'str.repeat(s $str, n $int) -> $str',               doc: 'Repeat a string n times.' },
-    { name: 'pad_left',    signature: 'str.pad_left(s $str, width $int, ch $str) -> $str', doc: 'Pad a string on the left to reach width.' },
-    { name: 'pad_right',   signature: 'str.pad_right(s $str, width $int, ch $str) -> $str', doc: 'Pad a string on the right to reach width.' },
+    { name: 'padleft',    signature: 'str.padleft(s $str, width $int, ch $str) -> $str', doc: 'Pad a string on the left to reach width.' },
+    { name: 'padright',   signature: 'str.padright(s $str, width $int, ch $str) -> $str', doc: 'Pad a string on the right to reach width.' },
   ],
   math: [
     { name: 'abs',    signature: 'math.abs(x $float) -> $float',                doc: 'Return the absolute value.' },
@@ -257,7 +258,7 @@ const STDLIB_FUNCTIONS = {
   ],
   crypto: [
     { name: 'sha256',      signature: 'crypto.sha256(data $str) -> $str',             doc: 'Compute SHA-256 hash, returning hex string.' },
-    { name: 'random_bytes', signature: 'crypto.random_bytes(n $int) -> $str',          doc: 'Generate n cryptographically random bytes as hex.' },
+    { name: 'randombytes', signature: 'crypto.randombytes(n $int) -> $str',          doc: 'Generate n cryptographically random bytes as hex.' },
     { name: 'uuid',         signature: 'crypto.uuid() -> $str',                        doc: 'Generate a random UUID v4.' },
   ],
   process: [
@@ -321,7 +322,7 @@ async function getInterface(doc) {
 function wordAt(doc, position) {
   const text = doc.getText();
   const off  = doc.offsetAt(position);
-  const idRe = /[A-Za-z_0-9]/;
+  const idRe = /[A-Za-z0-9]/;
   let start = off, end = off;
   while (start > 0 && idRe.test(text[start - 1])) start--;
   while (end < text.length && idRe.test(text[end])) end++;
@@ -348,7 +349,7 @@ connection.onHover(async (params) => {
   /* Find "module.func" around the cursor position */
   const col = params.position.character;
   const dotExpr = line.match(
-    new RegExp(`\\b([a-z_][a-z_0-9]*)\\.([a-z_][a-z_0-9]*)\\b`, 'g'),
+    new RegExp(`\\b([a-z][a-z0-9]*)\\.([a-z][a-z0-9]*)\\b`, 'g'),
   );
   if (dotExpr) {
     for (const expr of dotExpr) {
@@ -456,8 +457,8 @@ connection.onDocumentSymbol(async (params) => {
 /* ── Completion (71.4.3) ─────────────────────────────────────────── */
 
 const TOKE_KEYWORDS = [
-  'fn', 'let', 'mut', 'if', 'else', 'for', 'while', 'return',
-  'import', 'type', 'match', 'true', 'false', 'nil',
+  'm', 'f', 't', 'i', 'if', 'el', 'lp', 'br',
+  'let', 'mut', 'as', 'rt', 'mt', 'true', 'false', 'nil',
 ];
 
 const TYPE_SIGILS = ['$str', '$int', '$float', '$bool', '$nil'];
@@ -472,7 +473,7 @@ connection.onCompletion((params) => {
   });
 
   /* ── Module function completions: "str." triggers str functions ── */
-  const dotMatch = line.match(/\b([a-z_][a-z_0-9]*)\.([a-z_0-9]*)$/i);
+  const dotMatch = line.match(/\b([a-z][a-z0-9]*)\.([a-z0-9]*)$/i);
   if (dotMatch) {
     const modName = dotMatch[1];
     const partial = dotMatch[2];
@@ -491,7 +492,7 @@ connection.onCompletion((params) => {
   }
 
   /* ── Import module completions: "I " or "import " ───────────── */
-  const importMatch = line.match(/^\s*(?:I|import)\s+([a-z_]*)$/i);
+  const importMatch = line.match(/^\s*(?:i|i=)\s*([a-z]*)$/i);
   if (importMatch) {
     const partial = importMatch[1];
     return STDLIB_MODULES
@@ -542,7 +543,7 @@ connection.onDefinition((params) => {
 
   /* Check the line at cursor for an import — resolve to .tki file */
   const curLine = lines[params.position.line] || '';
-  const importMatch = curLine.match(/^\s*(?:I|import)\s+(\S+)/);
+  const importMatch = curLine.match(/^\s*(?:i|i=)\s*(\S+)/);
   if (importMatch && importMatch[1] === word) {
     /* Try to find the .tki interface file relative to the document */
     try {
@@ -575,9 +576,9 @@ connection.onDefinition((params) => {
     return null;
   }
 
-  /* Search for function definitions: "F <name>" or "fn <name>" */
+  /* Search for function definitions: "f=" */
   for (let i = 0; i < lines.length; i++) {
-    const fnMatch = lines[i].match(/^\s*(?:F|fn)\s+(\w+)/);
+    const fnMatch = lines[i].match(/^\s*(?:f|f=)\s*(\w+)/);
     if (fnMatch && fnMatch[1] === word) {
       const col = lines[i].indexOf(word);
       return {
@@ -590,9 +591,9 @@ connection.onDefinition((params) => {
     }
   }
 
-  /* Search for type definitions: "T <name>" or "type <name>" */
+  /* Search for type definitions: "t=" */
   for (let i = 0; i < lines.length; i++) {
-    const typeMatch = lines[i].match(/^\s*(?:T|type)\s+(\w+)/);
+    const typeMatch = lines[i].match(/^\s*(?:t|t=)\s*(\w+)/);
     if (typeMatch && typeMatch[1] === word) {
       const col = lines[i].indexOf(word);
       return {
