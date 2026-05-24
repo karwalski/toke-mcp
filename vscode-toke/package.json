@@ -2,7 +2,7 @@
   "name": "toke-language",
   "displayName": "Toke Language Support",
   "description": "Syntax highlighting, diagnostics, and code intelligence for the Toke programming language",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "tokelang",
   "license": "Apache-2.0",
   "repository": {
@@ -50,6 +50,13 @@
         "path": "./snippets/toke.json"
       }
     ],
+    "commands": [
+      {
+        "command": "toke.openCompanion",
+        "title": "Toke: Open Companion File",
+        "enablement": "editorLangId == toke"
+      }
+    ],
     "configuration": {
       "title": "Toke",
       "properties": {
@@ -62,6 +69,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable the Toke language server for diagnostics and code intelligence"
+        },
+        "toke.companion.autoOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open companion files (.tkc.md, .tkc.yaml, .tkc.json) side-by-side when opening a .tk file"
         }
       }
     }
