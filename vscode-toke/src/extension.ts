@@ -44,7 +44,7 @@ async function openCompanionBeside(companionUri: vscode.Uri): Promise<void> {
   await vscode.commands.executeCommand(
     "vscode.open",
     companionUri,
-    { viewColumn: vscode.ViewColumn.Beside, preview: true }
+    vscode.ViewColumn.Beside
   );
 }
 
@@ -110,7 +110,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // ── Command: Open Companion File ──
   context.subscriptions.push(
-    vscode.commands.registerCommand("toke.openCompanion", () => {
+    vscode.commands.registerCommand("toke.openCompanion", async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || editor.document.languageId !== "toke") {
         vscode.window.showInformationMessage("Open a .tk file first.");
@@ -118,7 +118,12 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       const companion = findCompanion(editor.document.uri);
       if (companion) {
-        openCompanionBeside(companion);
+        try {
+          await openCompanionBeside(companion);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          vscode.window.showErrorMessage(`Failed to open companion: ${msg}`);
+        }
       } else {
         vscode.window.showInformationMessage(
           "No companion file found. Expected: .tkc.md, .tkc.yaml, or .tkc.json alongside the .tk file."

@@ -1,8 +1,8 @@
 {
   "name": "toke-language",
-  "displayName": "Toke Language Support",
+  "displayName": "Toke - Token-Optimised Language",
   "description": "Syntax highlighting, diagnostics, and code intelligence for the Toke programming language",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "publisher": "tokelang",
   "license": "Apache-2.0",
   "repository": {
@@ -20,7 +20,8 @@
   ],
   "icon": "images/toke-icon.png",
   "activationEvents": [
-    "onLanguage:toke"
+    "onLanguage:toke",
+    "onCommand:toke.openCompanion"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -79,7 +80,8 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "vsce package"
@@ -87,8 +89,9 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
-    "typescript": "^5.3.0",
-    "@vscode/vsce": "^2.22.0"
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.3.0"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
