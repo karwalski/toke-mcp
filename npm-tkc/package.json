@@ -1,0 +1,27 @@
+{
+  "name": "@tokelang/tkc",
+  "version": "0.3.0",
+  "description": "The toke language checker — fast, correct, minimal",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karwalski/toke-mcp.git",
+    "directory": "npm-tkc"
+  },
+  "bin": {
+    "tkc": "bin/tkc"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "optionalDependencies": {
+    "@tokelang/tkc-darwin-arm64": "0.3.0",
+    "@tokelang/tkc-darwin-x64": "0.3.0",
+    "@tokelang/tkc-linux-x64": "0.3.0",
+    "@tokelang/tkc-linux-arm64": "0.3.0"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "keywords": ["toke", "tkc", "checker", "language"]
+}

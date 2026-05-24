@@ -1,0 +1,14 @@
+{
+  "name": "@tokelang/tkc-darwin-arm64",
+  "version": "0.3.0",
+  "description": "tkc binary for macOS ARM64 (Apple Silicon)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karwalski/toke-mcp.git",
+    "directory": "npm-tkc/platforms/tkc-darwin-arm64"
+  },
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "preferUnplugged": true
+}

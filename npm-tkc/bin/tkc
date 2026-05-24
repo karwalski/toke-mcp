@@ -1,0 +1,23 @@
+#!/bin/sh
+# Wrapper script for the tkc binary.
+# After postinstall, this file is replaced with the actual binary.
+# If you see this message, the binary was not installed correctly.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BINARY="$SCRIPT_DIR/tkc"
+
+# Check if the binary exists and is executable (not this script itself)
+if [ -x "$BINARY" ] && file "$BINARY" 2>/dev/null | grep -qv "shell script"; then
+  exec "$BINARY" "$@"
+fi
+
+echo "Error: tkc binary not found for your platform ($(uname -s)-$(uname -m))." >&2
+echo "" >&2
+echo "This can happen if:" >&2
+echo "  - Your platform is not supported (darwin-arm64, darwin-x64, linux-x64, linux-arm64)" >&2
+echo "  - The optional dependency was not installed (try: npm install @tokelang/tkc --force)" >&2
+echo "" >&2
+echo "See https://github.com/karwalski/toke-mcp for more information." >&2
+exit 1

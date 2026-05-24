@@ -1,0 +1,14 @@
+{
+  "name": "@tokelang/tkc-linux-x64",
+  "version": "0.3.0",
+  "description": "tkc binary for Linux x64",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karwalski/toke-mcp.git",
+    "directory": "npm-tkc/platforms/tkc-linux-x64"
+  },
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "preferUnplugged": true
+}

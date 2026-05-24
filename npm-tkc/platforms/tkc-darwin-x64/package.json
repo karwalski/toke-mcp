@@ -1,0 +1,14 @@
+{
+  "name": "@tokelang/tkc-darwin-x64",
+  "version": "0.3.0",
+  "description": "tkc binary for macOS x64 (Intel)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/karwalski/toke-mcp.git",
+    "directory": "npm-tkc/platforms/tkc-darwin-x64"
+  },
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "preferUnplugged": true
+}
