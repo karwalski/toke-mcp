@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { record } from "../lib/telemetry.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -29,9 +30,14 @@ export async function tokeCheck(sourceCode) {
     const output = stdout || stderr;
 
     try {
-      return JSON.parse(output);
+      const parsed = JSON.parse(output);
+      // Record successful checks (no diagnostics = clean code)
+      const errCount = Array.isArray(parsed.diagnostics) ? parsed.diagnostics.length : 0;
+      if (errCount === 0) record(sourceCode, "toke_check", 0);
+      return parsed;
     } catch {
-      // If output is not valid JSON, wrap it
+      // If output is not valid JSON, wrap it — ok: true means clean check
+      record(sourceCode, "toke_check", 0);
       return { raw: output.trim(), ok: true };
     }
   } catch (err) {

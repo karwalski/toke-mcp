@@ -181,8 +181,8 @@ const STDLIB_MODULES = [
 /** Map of module -> array of { name, signature, doc } */
 const STDLIB_FUNCTIONS = {
   str: [
-    { name: 'split',       signature: 'str.split(s $str, sep $str) -> [$str]',           doc: 'Split a string by separator, returning an array of substrings.' },
-    { name: 'join',        signature: 'str.join(parts [$str], sep $str) -> $str',         doc: 'Join an array of strings with a separator.' },
+    { name: 'split',       signature: 'str.split(s $str, sep $str) -> @($str)',           doc: 'Split a string by separator, returning an array of substrings.' },
+    { name: 'join',        signature: 'str.join(parts @($str), sep $str) -> $str',         doc: 'Join an array of strings with a separator.' },
     { name: 'trim',        signature: 'str.trim(s $str) -> $str',                         doc: 'Remove leading and trailing whitespace.' },
     { name: 'upper',       signature: 'str.upper(s $str) -> $str',                        doc: 'Convert all characters to uppercase.' },
     { name: 'lower',       signature: 'str.lower(s $str) -> $str',                        doc: 'Convert all characters to lowercase.' },
@@ -190,41 +190,41 @@ const STDLIB_FUNCTIONS = {
     { name: 'replace',     signature: 'str.replace(s $str, old $str, new $str) -> $str',  doc: 'Replace all occurrences of old with new.' },
     { name: 'startswith', signature: 'str.startswith(s $str, prefix $str) -> $bool',    doc: 'Check whether a string starts with prefix.' },
     { name: 'endswith',   signature: 'str.endswith(s $str, suffix $str) -> $bool',      doc: 'Check whether a string ends with suffix.' },
-    { name: 'len',         signature: 'str.len(s $str) -> $int',                          doc: 'Return the length of a string in bytes.' },
-    { name: 'slice',       signature: 'str.slice(s $str, start $int, end $int) -> $str',  doc: 'Return a substring from start to end index.' },
-    { name: 'repeat',      signature: 'str.repeat(s $str, n $int) -> $str',               doc: 'Repeat a string n times.' },
-    { name: 'padleft',    signature: 'str.padleft(s $str, width $int, ch $str) -> $str', doc: 'Pad a string on the left to reach width.' },
-    { name: 'padright',   signature: 'str.padright(s $str, width $int, ch $str) -> $str', doc: 'Pad a string on the right to reach width.' },
+    { name: 'len',         signature: 'str.len(s $str) -> $i64',                          doc: 'Return the length of a string in bytes.' },
+    { name: 'slice',       signature: 'str.slice(s $str, start $i64, end $i64) -> $str',  doc: 'Return a substring from start to end index.' },
+    { name: 'repeat',      signature: 'str.repeat(s $str, n $i64) -> $str',               doc: 'Repeat a string n times.' },
+    { name: 'padleft',    signature: 'str.padleft(s $str, width $i64, ch $str) -> $str', doc: 'Pad a string on the left to reach width.' },
+    { name: 'padright',   signature: 'str.padright(s $str, width $i64, ch $str) -> $str', doc: 'Pad a string on the right to reach width.' },
   ],
   math: [
-    { name: 'abs',    signature: 'math.abs(x $float) -> $float',                doc: 'Return the absolute value.' },
-    { name: 'ceil',   signature: 'math.ceil(x $float) -> $int',                 doc: 'Round up to the nearest integer.' },
-    { name: 'floor',  signature: 'math.floor(x $float) -> $int',                doc: 'Round down to the nearest integer.' },
-    { name: 'round',  signature: 'math.round(x $float) -> $int',                doc: 'Round to the nearest integer.' },
-    { name: 'sqrt',   signature: 'math.sqrt(x $float) -> $float',               doc: 'Return the square root.' },
-    { name: 'pow',    signature: 'math.pow(base $float, exp $float) -> $float',  doc: 'Raise base to the power of exp.' },
-    { name: 'min',    signature: 'math.min(a $float, b $float) -> $float',       doc: 'Return the smaller of two values.' },
-    { name: 'max',    signature: 'math.max(a $float, b $float) -> $float',       doc: 'Return the larger of two values.' },
-    { name: 'log',    signature: 'math.log(x $float) -> $float',                 doc: 'Return the natural logarithm.' },
-    { name: 'sin',    signature: 'math.sin(x $float) -> $float',                 doc: 'Return the sine of x in radians.' },
-    { name: 'cos',    signature: 'math.cos(x $float) -> $float',                 doc: 'Return the cosine of x in radians.' },
-    { name: 'tan',    signature: 'math.tan(x $float) -> $float',                 doc: 'Return the tangent of x in radians.' },
-    { name: 'random', signature: 'math.random() -> $float',                      doc: 'Return a random float between 0.0 and 1.0.' },
-    { name: 'pi',     signature: 'math.pi -> $float',                            doc: 'The constant pi (3.14159...).' },
+    { name: 'abs',    signature: 'math.abs(x $f64) -> $f64',                doc: 'Return the absolute value.' },
+    { name: 'ceil',   signature: 'math.ceil(x $f64) -> $i64',                 doc: 'Round up to the nearest integer.' },
+    { name: 'floor',  signature: 'math.floor(x $f64) -> $i64',                doc: 'Round down to the nearest integer.' },
+    { name: 'round',  signature: 'math.round(x $f64) -> $i64',                doc: 'Round to the nearest integer.' },
+    { name: 'sqrt',   signature: 'math.sqrt(x $f64) -> $f64',               doc: 'Return the square root.' },
+    { name: 'pow',    signature: 'math.pow(base $f64, exp $f64) -> $f64',  doc: 'Raise base to the power of exp.' },
+    { name: 'min',    signature: 'math.min(a $f64, b $f64) -> $f64',       doc: 'Return the smaller of two values.' },
+    { name: 'max',    signature: 'math.max(a $f64, b $f64) -> $f64',       doc: 'Return the larger of two values.' },
+    { name: 'log',    signature: 'math.log(x $f64) -> $f64',                 doc: 'Return the natural logarithm.' },
+    { name: 'sin',    signature: 'math.sin(x $f64) -> $f64',                 doc: 'Return the sine of x in radians.' },
+    { name: 'cos',    signature: 'math.cos(x $f64) -> $f64',                 doc: 'Return the cosine of x in radians.' },
+    { name: 'tan',    signature: 'math.tan(x $f64) -> $f64',                 doc: 'Return the tangent of x in radians.' },
+    { name: 'random', signature: 'math.random() -> $f64',                      doc: 'Return a random float between 0.0 and 1.0.' },
+    { name: 'pi',     signature: 'math.pi -> $f64',                            doc: 'The constant pi (3.14159...).' },
   ],
   file: [
     { name: 'read',      signature: 'file.read(path $str) -> $str',                     doc: 'Read entire file contents as a string.' },
-    { name: 'write',     signature: 'file.write(path $str, data $str) -> $nil',          doc: 'Write a string to a file, creating or overwriting.' },
-    { name: 'append',    signature: 'file.append(path $str, data $str) -> $nil',         doc: 'Append a string to the end of a file.' },
+    { name: 'write',     signature: 'file.write(path $str, data $str) -> $void',          doc: 'Write a string to a file, creating or overwriting.' },
+    { name: 'append',    signature: 'file.append(path $str, data $str) -> $void',         doc: 'Append a string to the end of a file.' },
     { name: 'exists',    signature: 'file.exists(path $str) -> $bool',                   doc: 'Check whether a file or directory exists.' },
-    { name: 'remove',    signature: 'file.remove(path $str) -> $nil',                    doc: 'Delete a file.' },
-    { name: 'mkdir',     signature: 'file.mkdir(path $str) -> $nil',                     doc: 'Create a directory and any necessary parents.' },
-    { name: 'readdir',   signature: 'file.readdir(path $str) -> [$str]',                 doc: 'List directory contents as an array of names.' },
+    { name: 'remove',    signature: 'file.remove(path $str) -> $void',                    doc: 'Delete a file.' },
+    { name: 'mkdir',     signature: 'file.mkdir(path $str) -> $void',                     doc: 'Create a directory and any necessary parents.' },
+    { name: 'readdir',   signature: 'file.readdir(path $str) -> @($str)',                 doc: 'List directory contents as an array of names.' },
     { name: 'stat',      signature: 'file.stat(path $str) -> FileInfo',                  doc: 'Return metadata about a file (size, modified time, etc.).' },
   ],
   env: [
     { name: 'get',    signature: 'env.get(key $str) -> $str',                doc: 'Get an environment variable value. Returns empty string if unset.' },
-    { name: 'set',    signature: 'env.set(key $str, val $str) -> $nil',      doc: 'Set an environment variable.' },
+    { name: 'set',    signature: 'env.set(key $str, val $str) -> $void',      doc: 'Set an environment variable.' },
     { name: 'has',    signature: 'env.has(key $str) -> $bool',               doc: 'Check whether an environment variable is set.' },
     { name: 'all',    signature: 'env.all() -> @($str: $str)',               doc: 'Return all environment variables as a map.' },
     { name: 'cwd',    signature: 'env.cwd() -> $str',                        doc: 'Return the current working directory.' },
@@ -237,35 +237,35 @@ const STDLIB_FUNCTIONS = {
     { name: 'post',    signature: 'http.post(url $str, body $str) -> Response',       doc: 'Send an HTTP POST request with a body.' },
     { name: 'put',     signature: 'http.put(url $str, body $str) -> Response',        doc: 'Send an HTTP PUT request with a body.' },
     { name: 'delete',  signature: 'http.delete(url $str) -> Response',                doc: 'Send an HTTP DELETE request.' },
-    { name: 'serve',   signature: 'http.serve(addr $str, handler F) -> $nil',         doc: 'Start an HTTP server listening on the given address.' },
-    { name: 'listen',  signature: 'http.listen(port $int, handler F) -> $nil',        doc: 'Start an HTTP server on the given port.' },
+    { name: 'serve',   signature: 'http.serve(addr $str, handler f) -> $void',         doc: 'Start an HTTP server listening on the given address.' },
+    { name: 'listen',  signature: 'http.listen(port $i64, handler f) -> $void',        doc: 'Start an HTTP server on the given port.' },
   ],
   log: [
-    { name: 'info',    signature: 'log.info(msg $str) -> $nil',    doc: 'Log an informational message.' },
-    { name: 'warn',    signature: 'log.warn(msg $str) -> $nil',    doc: 'Log a warning message.' },
-    { name: 'error',   signature: 'log.error(msg $str) -> $nil',   doc: 'Log an error message.' },
-    { name: 'debug',   signature: 'log.debug(msg $str) -> $nil',   doc: 'Log a debug message.' },
-    { name: 'fatal',   signature: 'log.fatal(msg $str) -> $nil',   doc: 'Log a fatal message and exit.' },
+    { name: 'info',    signature: 'log.info(msg $str) -> $void',    doc: 'Log an informational message.' },
+    { name: 'warn',    signature: 'log.warn(msg $str) -> $void',    doc: 'Log a warning message.' },
+    { name: 'error',   signature: 'log.error(msg $str) -> $void',   doc: 'Log an error message.' },
+    { name: 'debug',   signature: 'log.debug(msg $str) -> $void',   doc: 'Log a debug message.' },
+    { name: 'fatal',   signature: 'log.fatal(msg $str) -> $void',   doc: 'Log a fatal message and exit.' },
   ],
   json: [
     { name: 'parse',     signature: 'json.parse(s $str) -> any',        doc: 'Parse a JSON string into a value.' },
     { name: 'stringify',  signature: 'json.stringify(v any) -> $str',    doc: 'Serialize a value to a JSON string.' },
   ],
   time: [
-    { name: 'now',    signature: 'time.now() -> $int',                     doc: 'Return current Unix timestamp in seconds.' },
-    { name: 'sleep',  signature: 'time.sleep(ms $int) -> $nil',            doc: 'Sleep for the given number of milliseconds.' },
-    { name: 'format', signature: 'time.format(ts $int, fmt $str) -> $str', doc: 'Format a Unix timestamp as a string.' },
+    { name: 'now',    signature: 'time.now() -> $i64',                     doc: 'Return current Unix timestamp in seconds.' },
+    { name: 'sleep',  signature: 'time.sleep(ms $i64) -> $void',            doc: 'Sleep for the given number of milliseconds.' },
+    { name: 'format', signature: 'time.format(ts $i64, fmt $str) -> $str', doc: 'Format a Unix timestamp as a string.' },
   ],
   crypto: [
     { name: 'sha256',      signature: 'crypto.sha256(data $str) -> $str',             doc: 'Compute SHA-256 hash, returning hex string.' },
-    { name: 'randombytes', signature: 'crypto.randombytes(n $int) -> $str',          doc: 'Generate n cryptographically random bytes as hex.' },
+    { name: 'randombytes', signature: 'crypto.randombytes(n $i64) -> $str',          doc: 'Generate n cryptographically random bytes as hex.' },
     { name: 'uuid',         signature: 'crypto.uuid() -> $str',                        doc: 'Generate a random UUID v4.' },
   ],
   process: [
-    { name: 'exit',  signature: 'process.exit(code $int) -> $nil',                doc: 'Exit the process with the given status code.' },
-    { name: 'args',  signature: 'process.args() -> [$str]',                        doc: 'Return command-line arguments.' },
-    { name: 'exec',  signature: 'process.exec(cmd $str, args [$str]) -> ExecResult', doc: 'Execute a shell command and return its output.' },
-    { name: 'pid',   signature: 'process.pid() -> $int',                            doc: 'Return the current process ID.' },
+    { name: 'exit',  signature: 'process.exit(code $i64) -> $void',                doc: 'Exit the process with the given status code.' },
+    { name: 'args',  signature: 'process.args() -> @($str)',                        doc: 'Return command-line arguments.' },
+    { name: 'exec',  signature: 'process.exec(cmd $str, args @($str)) -> ExecResult', doc: 'Execute a shell command and return its output.' },
+    { name: 'pid',   signature: 'process.pid() -> $i64',                            doc: 'Return the current process ID.' },
   ],
   path: [
     { name: 'join',     signature: 'path.join(parts ...$str) -> $str',   doc: 'Join path segments with the OS separator.' },
@@ -377,7 +377,7 @@ connection.onHover(async (params) => {
     return {
       contents: {
         kind: 'plaintext',
-        value: `module ${word}\n\nFunctions: ${fnList}`,
+        value: `m ${word}\n\nFunctions: ${fnList}`,
       },
     };
   }
@@ -395,7 +395,7 @@ connection.onHover(async (params) => {
       return {
         contents: {
           kind: 'plaintext',
-          value: `F ${word}(${params_str}) -> ${ret}${ext}`,
+          value: `f ${word}(${params_str}) -> ${ret}${ext}`,
         },
       };
     }
@@ -406,7 +406,7 @@ connection.onHover(async (params) => {
       return {
         contents: {
           kind: 'plaintext',
-          value: `T ${word}\n${fields}`,
+          value: `t ${word}\n${fields}`,
         },
       };
     }
@@ -458,10 +458,10 @@ connection.onDocumentSymbol(async (params) => {
 
 const TOKE_KEYWORDS = [
   'm', 'f', 't', 'i', 'if', 'el', 'lp', 'br',
-  'let', 'mut', 'as', 'rt', 'mt', 'true', 'false', 'nil',
+  'let', 'mut', 'as', 'rt', 'mt', 'true', 'false', 'void',
 ];
 
-const TYPE_SIGILS = ['$str', '$int', '$float', '$bool', '$nil'];
+const TYPE_SIGILS = ['$str', '$i64', '$f64', '$bool', '$void'];
 
 connection.onCompletion((params) => {
   const doc = documents.get(params.textDocument.uri);
@@ -491,7 +491,7 @@ connection.onCompletion((params) => {
     return [];
   }
 
-  /* ── Import module completions: "I " or "import " ───────────── */
+  /* ── Import module completions: "i " or "i=" ────────────────── */
   const importMatch = line.match(/^\s*(?:i|i=)\s*([a-z]*)$/i);
   if (importMatch) {
     const partial = importMatch[1];

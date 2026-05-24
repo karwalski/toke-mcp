@@ -124,6 +124,7 @@ Copy `codex/codex.md` and `codex/mcp.json` into your project root. See [`codex/R
 | `RATE_LIMIT_PER_HOUR` | `100` | Max requests per hour per IP |
 | `MAX_CONNECTIONS` | `5` | Max concurrent SSE connections per IP |
 | `REDIS_URL` | -- | Redis URL for rate limiting (optional, in-memory fallback) |
+| `TOKE_TELEMETRY` | -- | Set to `1` to enable local telemetry recording. When enabled, source code that passes `toke_check` or compiles successfully is saved (with string literals stripped) to `~/.toke/telemetry/` for potential corpus inclusion. Files are deduplicated by content hash. No data is sent to any server. |
 
 ## Extending
 

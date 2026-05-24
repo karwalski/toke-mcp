@@ -7,19 +7,19 @@
     "description": "Declare a module"
   },
   "Function declaration": {
-    "prefix": "fn",
+    "prefix": "f",
     "body": [
-      "f=${1:name}(${2:params}):${3:ret}{",
+      "f=${1:name}(${2:params}):\\${3|\\$void,\\$i64|}{",
       "\t$0",
       "}"
     ],
     "description": "Declare a function"
   },
   "Type declaration": {
-    "prefix": "st",
+    "prefix": "t",
     "body": [
       "t=${1:Name}{",
-      "\t${2:field}:${3:type}",
+      "\t${2:field}:\\${3:type}",
       "}"
     ],
     "description": "Declare a struct type"
@@ -70,7 +70,7 @@
     "body": [
       "m=${1:main};",
       "",
-      "f=main():i64{",
+      "f=main():\\$i64{",
       "\t$0",
       "\t0",
       "}"

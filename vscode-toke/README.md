@@ -5,7 +5,7 @@ Syntax highlighting, diagnostics, and code intelligence for the [Toke programmin
 ## Features
 
 - **Syntax highlighting** -- TextMate grammar for `.tk` files covering keywords, types, literals, declarations, and operators
-- **Snippets** -- Common patterns: module, function, type, import, loop, if-else, let bindings, main template
+- **Snippets** -- Common patterns: module, function, type, import, loop, if-else, let bindings, main
 - **Language server** -- Diagnostics, hover info, and document symbols via `toke-lsp` (requires separate installation)
 - **Status bar** -- Shows "Toke" indicator when editing `.tk` files
 
@@ -31,10 +31,10 @@ To change the LSP binary path, set `toke.lsp.path` in VS Code settings. To disab
 
 | Prefix    | Expands to                          |
 |-----------|-------------------------------------|
-| `mod`     | `M=name;`                          |
-| `fn`      | `F=name(params):ret{...}`          |
-| `st`      | `T=Name{field:type}`               |
-| `imp`     | `I=alias:path;`                    |
+| `mod`     | `m=name;`                          |
+| `f`       | `f=name(params):$ret{...}`         |
+| `t`       | `t=Name{field:$type}`              |
+| `imp`     | `i=alias:path;`                    |
 | `loop`    | `lp(init;cond;step){...}`          |
 | `ifelse`  | `if(cond){...}el{...}`             |
 | `let`     | `let name=value;`                  |

@@ -25,7 +25,7 @@
       }
     },
     "function-declaration": {
-      "match": "(f)(=)([a-z][a-z0-9]*)(\\()",
+      "match": "(f)(=)([a-z][a-z0-9]*)(\\s*\\()",
       "captures": {
         "1": { "name": "keyword.control.function.toke" },
         "2": { "name": "keyword.operator.assignment.toke" },
@@ -34,7 +34,7 @@
       }
     },
     "type-declaration": {
-      "match": "(t)(=)(\\$[a-z][a-z0-9]*)(\\{)",
+      "match": "(t)(=)([a-z][a-z0-9_]*)(\\s*\\{)",
       "captures": {
         "1": { "name": "keyword.control.type.toke" },
         "2": { "name": "keyword.operator.assignment.toke" },
@@ -57,7 +57,7 @@
       "name": "keyword.control.toke"
     },
     "types": {
-      "match": "\\b(i64|f64|str|bool|void)\\b",
+      "match": "\\$(i64|f64|str|bool|void)\\b",
       "name": "support.type.toke"
     },
     "constants": {
@@ -67,7 +67,7 @@
     "numbers": {
       "patterns": [
         {
-          "match": "\\b0x[0-9a-fA-F]+\\b",
+          "match": "\\b0x[0-9a-f]+\\b",
           "name": "constant.numeric.hex.toke"
         },
         {
@@ -96,7 +96,7 @@
       ]
     },
     "operators": {
-      "match": "[+\\-*/<=>&|!]",
+      "match": "[+\\-*/<=>&|!%@#]",
       "name": "keyword.operator.toke"
     },
     "punctuation": {
@@ -110,12 +110,12 @@
           "name": "punctuation.brace.toke"
         },
         {
-          "match": "[()]",
-          "name": "punctuation.paren.toke"
-        },
-        {
           "match": "@\\(",
           "name": "punctuation.array.toke"
+        },
+        {
+          "match": "[()]",
+          "name": "punctuation.paren.toke"
         }
       ]
     }

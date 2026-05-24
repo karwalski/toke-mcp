@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { record } from "../lib/telemetry.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -25,6 +26,7 @@ export async function tokeCompile(sourceCode) {
       { timeout: 10_000 }
     );
 
+    record(sourceCode, "toke_compile", 0);
     return { ok: true, llvm_ir: stdout };
   } catch (err) {
     // Compilation failed — try to extract diagnostics

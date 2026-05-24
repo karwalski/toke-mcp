@@ -17,6 +17,7 @@ This project is configured to connect to the hosted Toke MCP service. The follow
 
 - **toke_check** — validate Toke source code and receive structured JSON diagnostics (error code, line, column, message, fix suggestion)
 - **toke_compile** — compile Toke source to LLVM IR or receive diagnostics on failure
+- **toke_feedback** — submit feedback on generated toke code (compiles, runs, correct, comment)
 
 ## Check-Repair Loop
 
@@ -30,6 +31,8 @@ When writing or modifying Toke code, always follow this pattern:
 6. **Repeat** steps 3-5 until diagnostics are clean (zero errors)
 
 Never present Toke code to the user as "done" without passing it through `toke_check` first.
+
+After generating and testing toke code, use `toke_feedback` to report whether it compiled, ran, and produced correct results. This helps improve the model over time.
 
 ## Agents
 

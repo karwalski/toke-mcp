@@ -21,10 +21,11 @@ import { tokeAnalyse } from "./tools/analyse.js";
 import { tokeRender } from "./tools/render.js";
 import { tokeFormat } from "./tools/format.js";
 import { tokeMigrate } from "./tools/migrate.js";
+import { tokeFeedback } from "./tools/feedback.js";
 
 const require = createRequire(import.meta.url);
-const { checkToolRateLimit, checkConnectionLimit } = require("./lib/rate-limit-middleware");
-const { registerConnection, unregisterConnection } = require("./lib/connection-registry");
+const { checkToolRateLimit, checkConnectionLimit } = require("./lib/rate-limit-middleware.cjs");
+const { registerConnection, unregisterConnection } = require("./lib/connection-registry.cjs");
 
 const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +44,7 @@ try {
 // ---------------------------------------------------------------------------
 
 /**
- * Create a configured MCP server with all 14 toke tools registered.
+ * Create a configured MCP server with all 15 toke tools registered.
  *
  * @param {object} [options]
  * @param {string} [options.name]    - Server name (default: "toke-mcp")
@@ -246,6 +247,22 @@ export function createMcpServer(options = {}) {
           text: JSON.stringify(tokeRender(template, vars ?? {}), null, 2),
         },
       ],
+    })
+  );
+
+  server.tool(
+    "toke_feedback",
+    "Submit feedback on generated toke code — whether it compiled, ran correctly, and optional comments.",
+    {
+      source: z.string().describe("The toke source code being reviewed"),
+      prompt: z.string().describe("The original prompt or description used to generate the code"),
+      compiles: z.boolean().describe("Whether the code compiles successfully"),
+      runs: z.boolean().optional().describe("Whether the code runs successfully"),
+      correct: z.boolean().optional().describe("Whether the code produces correct results"),
+      comment: z.string().optional().describe("Optional freeform comment about the generated code"),
+    },
+    async ({ source, prompt, compiles, runs, correct, comment }) => ({
+      content: [{ type: "text", text: JSON.stringify(await tokeFeedback({ source, prompt, compiles, runs, correct, comment }), null, 2) }],
     })
   );
 
