@@ -1,5 +1,5 @@
 {
-  "name": "@tokelang/lsp-server",
+  "name": "@tokelang/lsp",
   "version": "0.1.0",
   "description": "Language Server Protocol implementation for the Toke programming language",
   "main": "server.js",

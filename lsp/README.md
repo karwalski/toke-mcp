@@ -1,6 +1,6 @@
-# @tokelang/lsp-server
+# @tokelang/lsp
 
-[![npm](https://img.shields.io/npm/v/@tokelang/lsp-server)](https://www.npmjs.com/package/@tokelang/lsp-server)
+[![npm](https://img.shields.io/npm/v/@tokelang/lsp)](https://www.npmjs.com/package/@tokelang/lsp)
 
 Language Server Protocol implementation for the Toke programming language. Wraps the `tkc` compiler to provide real-time diagnostics, hover information, and document symbols.
 
@@ -18,13 +18,13 @@ Language Server Protocol implementation for the Toke programming language. Wraps
 ## Install
 
 ```bash
-npm install -g @tokelang/lsp-server
+npm install -g @tokelang/lsp
 ```
 
 Or run directly:
 
 ```bash
-npx @tokelang/lsp-server
+npx @tokelang/lsp
 ```
 
 For development:
@@ -112,6 +112,25 @@ vim.filetype.add({
    - **Arguments:** `/path/to/toke-cloud/lsp/server.js --stdio`
    - **File patterns:** `*.tk`
 4. Apply and restart.
+
+### Helix
+
+Add to your `languages.toml`:
+
+```toml
+[[language]]
+name = "toke"
+scope = "source.toke"
+file-types = ["tk"]
+roots = [".git"]
+language-servers = ["toke-lsp"]
+
+[language-server.toke-lsp]
+command = "toke-lsp"
+args = ["--stdio"]
+```
+
+If you installed globally via `npm install -g @tokelang/lsp`, the `toke-lsp` binary will be on PATH. Otherwise use the full path to `server.js`.
 
 ## Protocol
 
