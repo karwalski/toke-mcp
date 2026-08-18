@@ -174,6 +174,13 @@ See [SELF_HOSTED.md](SELF_HOSTED.md) for Docker deployment and production config
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and how to add new tools.
 
+## Related Repositories
+
+- [toke](https://github.com/karwalski/toke) -- the toke compiler, spec, and stdlib this server wraps (`tkc`)
+- [toke-corpus](https://github.com/karwalski/toke-corpus) -- training-data generation (opt-in telemetry from this server can feed it)
+- [toke-model](https://github.com/karwalski/toke-models) -- model training behind `toke_generate`
+- [toke-tokenizer](https://github.com/karwalski/toke-tokenizer) -- custom tokenizer used for token-budget analysis
+
 ## License
 
 [MIT](LICENSE)
