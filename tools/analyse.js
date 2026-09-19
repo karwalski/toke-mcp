@@ -94,13 +94,18 @@ export async function tokeAnalyse(input, tokenizer = "cl100k_base") {
       // Fallback: estimate from character counts (~4 chars/token for cl100k_base)
       const raw_tokens = Math.ceil(input.length / 4);
       const schema_detected = detectSchema(input);
-      // Conservative 12.5% reduction estimate (Gate 1 measured baseline)
-      const est_compressed_tokens = Math.ceil(raw_tokens * 0.875);
-      const reduction_pct = 12.5;
+      // Story 132.15: this fallback used to multiply by 0.875 and report a flat
+      // "12.5% reduction", borrowed from the withdrawn Gate 1 headline — a number
+      // invented rather than measured, and about a different thing (that figure was a
+      // tokenizer comparison, not compression). Without tkc there is no measurement,
+      // so the fields are null and the caller can say so.
+      const est_compressed_tokens = null;
+      const reduction_pct = null;
       return {
         raw_tokens,
         est_compressed_tokens,
         reduction_pct,
+        estimated: true,
         tokenizer: effectiveTokenizer,
         schema_detected,
       };

@@ -44,11 +44,15 @@ const BENCHMARK_TASKS = {
 /**
  * BPE tokenizer for accurate toke token counting.
  *
- * Loads the purpose-built 16K BPE tokenizer (tokenizer_v03.json) trained on
- * 25,953 toke programs + 698 loke production modules. Falls back to a
+ * Loads the v0.3 16K BPE tokenizer (tokenizer_v03.json). Falls back to a
  * character-per-4 heuristic if the tokenizer file is not available.
  *
- * Gate 2 result: 52% average reduction vs cl100k_base across 42 benchmarks.
+ * This tokenizer is trained on toke text: its counts are comparable only with other
+ * counts of toke text, never against a baseline language tokenized by something else.
+ * The "52% average reduction vs cl100k_base" line that stood here is withdrawn (story
+ * 132.6) — it compared two tokenizers on one text, it is not reproducible from the
+ * dataset it cited, and tokenizer_v03's null unk_token silently drops backslashes,
+ * which inflates every number it produces. See toke/docs/metrics-baseline.md.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

@@ -28,7 +28,7 @@ const ERROR_CATALOG = {
     severity: "error",
     title: "Character outside Profile 1 character set",
     message:
-      "A character that is not in the 80-character Profile 1 set was found in a structural position. Only a-z, A-Z, 0-9, and (){}[]=:.;+-*/<>!| are permitted outside string literals.",
+      "A character outside the profile's character set was found in a structural position. The default profile is a closed 59-character set (lowercase a-z, digits, and the symbols ! \" $ % & ( ) * + - . / : ; < = > @ ^ { | } ~); the legacy profile is 86 characters and also admits A-Z and [ ].",
     fix: "Remove or replace the offending character. Non-ASCII and symbols like @, #, $, %, ^, &, ~ are not allowed in structural positions.",
     example: "m=test;\nf=bad():i64{<1£};",
   },

@@ -21,14 +21,18 @@ String literals use " as delimiter; within strings, any valid UTF-8 is permitted
 Escape sequences: \\" \\\\ \\n \\t \\r \\0 \\xNN`,
   },
   {
-    title: "Character Set — Phase 2 (56 Characters)",
+    title: "Character Set — default profile (59 characters)",
     keywords: ["phase 2", "sigils", "type sigils", "dollar", "at sign", "$", "@"],
-    content: `Phase 2 is the normative default profile, a reduced 56-character set.
+    content: `The default profile is a closed 59-character set, lowercase only.
 
 Lowercase:  a-z  (26)
 Digits:     0-9  (10)
-Symbols:    ( ) { } = : . ; + - * / < > ! | $ @  (18)
-Reserved:   ^ ~  (2)
+Symbols:    ! " $ % & ( ) * + - . / : ; < = > @ ^ { | } ~  (23)
+
+^ and ~ are bitwise XOR and NOT; % is modulo; & and && are bitwise-and and
+short-circuit-and. The characters rejected outside string literals are the
+apostrophe, comma, question mark, square brackets, backslash, underscore and
+backtick (E1003). Derived from src/lexer.c; see toke/docs/metrics-baseline.md.
 
 Key transformations from Phase 1:
 - Uppercase type names become $-prefixed lowercase: User -> $user, Str -> $str
@@ -42,14 +46,14 @@ Tokenizer efficiency: $user, $str, @( each tokenize as single tokens.`,
   {
     title: "Keywords",
     keywords: ["keywords", "reserved", "F", "T", "I", "M", "if", "el", "lp", "br", "let", "mut", "as", "rt"],
-    content: `The 12 reserved keywords:
+    content: `The 14 keywords — 10 reserved words plus the four declaration heads:
 
 | Keyword | Role |
 |---------|------|
-| F       | function definition |
-| T       | type definition |
-| I       | import declaration |
-| M       | module declaration |
+| f       | function definition |
+| t       | type definition |
+| i       | import declaration |
+| m       | module declaration |
 | if      | conditional branch |
 | el      | else branch (follows if block only) |
 | lp      | loop (the single loop construct) |
@@ -58,6 +62,8 @@ Tokenizer efficiency: $user, $str, @( each tokenize as single tokens.`,
 | mut     | mutable qualifier on binding |
 | as      | type cast |
 | rt      | return (long-form alternative to <) |
+| mt      | match |
+| sc      | scope |
 
 Boolean literals 'true' and 'false' are predefined identifiers, not keywords.`,
   },
@@ -433,7 +439,7 @@ Error code series: E1xxx (lexer), E2xxx (parser), E3xxx (names), E4xxx (types), 
     content: `toke design principles:
 
 1. Machine-first syntax — exactly one canonical form per construct
-2. Deterministic structure — LL(1) grammar, one unambiguous parse tree
+2. Deterministic structure — a backtrack-free grammar (bounded lookahead of up to 3 tokens), one unambiguous parse tree
 3. Token efficiency — minimise verbosity, every token carries semantic info
 4. Strong explicit typing — all types stated, no inference in v0.1
 5. Structured failure — machine-readable diagnostics with stable error codes

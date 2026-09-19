@@ -148,7 +148,7 @@ const STDLIB = {
   },
   toon: {
     module: "std.toon",
-    description: "TOON (Token-Oriented Object Notation) — the default toke serialization format. 30-60% fewer tokens than JSON for tabular data.",
+    description: "TOON (Token-Oriented Object Notation) — the default toke serialization format for tabular data: field names are declared once in a schema header instead of repeating per row.",
     functions: {
       enc:       { sig: "f=enc(data:$str;schema:$str):$str",  desc: "Encode data using the given schema into TOON format." },
       dec:       { sig: "f=dec(s:$str):$str",                  desc: "Decode a TOON string to a data string." },

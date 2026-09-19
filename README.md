@@ -67,7 +67,7 @@ The server starts on `http://localhost:3000` with:
 | `toke_bench` | Benchmark toke code against known tasks |
 | `toke_companion` | Generate, verify, or diff `.tkc.md` companion files |
 | `toke_format` | Auto-format toke source code |
-| `toke_migrate` | Migrate legacy 80-character syntax to the default syntax |
+| `toke_migrate` | Migrate the legacy 86-character syntax to the default syntax |
 | `toke_compress` | Compress text using toke compression |
 | `toke_decompress` | Decompress toke-compressed text |
 | `toke_analyse` | Pre-flight token budget estimation without modifying input |
