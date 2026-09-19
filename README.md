@@ -3,7 +3,27 @@
 [![npm](https://img.shields.io/npm/v/@tokelang/mcp-server)](https://www.npmjs.com/package/@tokelang/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Connect your AI coding assistant to the [Toke](https://tokelang.dev) programming language. This MCP server gives tools like Claude, Cursor, and VS Code the ability to write, compile, and understand toke code. It implements the [Model Context Protocol](https://modelcontextprotocol.io/) with 14 tools, SSE transport, rate limiting, and IDE integrations.
+Connect your AI coding assistant to the [toke](https://tokelang.dev) programming language. This MCP server gives tools like Claude, Cursor, and VS Code the ability to write, compile, and understand toke code. It implements the [Model Context Protocol](https://modelcontextprotocol.io/) with 14 tools, SSE transport, rate limiting, and IDE integrations.
+
+## About toke
+
+> toke: a compiled language designed for LLM code generation, with a small grammar, one
+> canonical form and compiler verification.
+
+toke is a compiled programming language designed for LLM code generation. It has 14
+keywords, a 55-character set, a backtrack-free grammar with bounded lookahead, and one
+canonical form per construct, chosen by measurement in a 46-pattern catalogue and
+reproduced by `tkc --min`. That makes generated code cheap to constrain during decoding,
+cheap for a compiler to verify afterwards, and compact to emit. Token efficiency is one
+measured property of toke, always reported with its tokenizer and its baseline, not the
+whole claim.
+
+*The one-liner and the paragraph above are reproduced word for word from the canonical
+description,
+[`docs/about/canonical.md`](https://github.com/karwalski/toke/blob/main/docs/about/canonical.md).
+Every number published about toke comes from
+[`docs/metrics-baseline.md`](https://github.com/karwalski/toke/blob/main/docs/metrics-baseline.md)
+and nowhere else.*
 
 ## Features
 
@@ -47,7 +67,7 @@ The server starts on `http://localhost:3000` with:
 | `toke_bench` | Benchmark toke code against known tasks |
 | `toke_companion` | Generate, verify, or diff `.tkc.md` companion files |
 | `toke_format` | Auto-format toke source code |
-| `toke_migrate` | Migrate legacy 80-char syntax to 56-char default syntax |
+| `toke_migrate` | Migrate legacy 80-character syntax to the default syntax |
 | `toke_compress` | Compress text using toke compression |
 | `toke_decompress` | Decompress toke-compressed text |
 | `toke_analyse` | Pre-flight token budget estimation without modifying input |
