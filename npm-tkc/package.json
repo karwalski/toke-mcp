@@ -1,7 +1,7 @@
 {
   "name": "@tokelang/tkc",
   "version": "0.3.0",
-  "description": "The toke language checker — fast, correct, minimal",
+  "description": "tkc, the reference toke compiler and checker: single-pass C99, native binaries, structured diagnostics. toke: a compiled language designed for LLM code generation, with a small grammar, one canonical form and compiler verification.",
   "license": "MIT",
   "repository": {
     "type": "git",

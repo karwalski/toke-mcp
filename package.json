@@ -1,7 +1,7 @@
 {
   "name": "@tokelang/mcp-server",
-  "version": "0.1.0",
-  "description": "Self-hostable MCP server for the Toke programming language",
+  "version": "0.1.1",
+  "description": "Self-hostable MCP server for the toke programming language. toke: a compiled language designed for LLM code generation, with a small grammar, one canonical form and compiler verification.",
   "type": "module",
   "main": "server.js",
   "bin": {
@@ -33,7 +33,10 @@
     "mcp",
     "language-server",
     "compiler",
-    "code-generation"
+    "code-generation",
+    "llm",
+    "token-efficiency",
+    "programming-language"
   ],
   "repository": {
     "type": "git",

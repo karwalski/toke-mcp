@@ -1,10 +1,19 @@
 {
   "name": "toke-language",
-  "displayName": "Toke - Token-Optimised Language",
-  "description": "Syntax highlighting, diagnostics, and code intelligence for the Toke programming language",
-  "version": "0.2.2",
+  "displayName": "toke language support",
+  "description": "Syntax highlighting, diagnostics and code intelligence for toke. toke: a compiled language designed for LLM code generation, with a small grammar, one canonical form and compiler verification.",
+  "version": "0.2.3",
   "publisher": "tokelang",
   "license": "Apache-2.0",
+  "homepage": "https://tokelang.dev",
+  "keywords": [
+    "toke",
+    "programming-language",
+    "llm",
+    "code-generation",
+    "token-efficiency",
+    "compiler"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/karwalski/toke-mcp.git",

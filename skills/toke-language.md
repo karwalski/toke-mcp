@@ -14,7 +14,9 @@ No uppercase letters. No square brackets. No underscores. The `$` sigil marks re
 
 ## Keywords
 
-Toke has 13 keywords. `true` and `false` are predefined identifiers, not keywords.
+toke has 14 keywords: `m i t f let if el lp br rt as mt sc mut`. `true` and `false` are
+predefined identifiers, not keywords, and the logical operators are lexical. (The v0.3
+"13" wording is retired — it omitted `sc`; see toke-spec-v0.4.md §A.)
 
 | Keyword | Role | Description |
 |---------|------|-------------|
@@ -31,6 +33,7 @@ Toke has 13 keywords. `true` and `false` are predefined identifiers, not keyword
 | `as` | Cast | Type cast |
 | `rt` | Return | Return (long form) |
 | `mt` | Match | Match expression |
+| `sc` | Scope | Structured-concurrency block (`sc { ... }`) |
 
 The `<` operator is the **short-form return** -- it is the idiomatic way to return values. Both `<expr` and `rt expr` are valid return statements.
 
