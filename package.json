@@ -23,7 +23,7 @@
     "express": "^5.1.0"
   },
   "optionalDependencies": {
-    "ioredis": "^5.0.0"
+    "ioredis": "^6.0.0"
   },
   "engines": {
     "node": ">=18"
