@@ -29,7 +29,7 @@ and nowhere else.*
 
 - **14 MCP tools** for compiling, checking, formatting, generating, and analysing toke code
 - **SSE transport** with session management and health checks
-- **Rate limiting** with in-memory or Redis-backed storage
+- **Rate limiting** per IP and tool, held in process memory
 - **IDE integrations** for Claude Code, VS Code, and Codex CLI
 - **Embeddable** -- export `createMcpServer()` and `createApp()` for custom infrastructure
 - **Self-hostable** with Docker or standalone Node.js
@@ -143,7 +143,7 @@ Copy `codex/codex.md` and `codex/mcp.json` into your project root. See [`codex/R
 | `TKC_PATH` | `tkc` | Path to tkc compiler binary |
 | `RATE_LIMIT_PER_HOUR` | `100` | Max requests per hour per IP |
 | `MAX_CONNECTIONS` | `5` | Max concurrent SSE connections per IP |
-| `REDIS_URL` | -- | Redis URL for rate limiting (optional, in-memory fallback) |
+| `REDIS_URL` | -- | **Not read.** Rate and connection limits are held in the server process's memory, so they are per-process and reset on restart. |
 | `TOKE_TELEMETRY` | -- | Set to `1` to enable local telemetry recording. When enabled, source code that passes `toke_check` or compiles successfully is saved (with string literals stripped) to `~/.toke/telemetry/` for potential corpus inclusion. Files are deduplicated by content hash. No data is sent to any server. |
 
 ## Extending
