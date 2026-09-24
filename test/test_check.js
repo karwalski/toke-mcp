@@ -15,7 +15,7 @@
 //      so, when none is.
 import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, readFileSync, chmodSync, existsSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, chmodSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -134,6 +134,15 @@ describe("toke_check against a real tkc", { skip: REAL_TKC ? false : "no tkc fou
       assert.deepEqual(codes(r), want.codes);
     });
   }
+
+  it("toke_compile: returns the IR and leaves no .ll behind", async () => {
+    mode("real");
+    const before = readdirSync(process.cwd()).filter((f) => f.endsWith(".ll"));
+    const r = await tokeCompile(src("ok"));
+    assert.equal(r.ok, true);
+    assert.match(r.llvm_ir, /^; module/);
+    assert.deepEqual(readdirSync(process.cwd()).filter((f) => f.endsWith(".ll")), before);
+  });
 
   it("toke_compile: two diagnostics from --emit-llvm", async () => {
     mode("real");

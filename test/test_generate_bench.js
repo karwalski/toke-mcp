@@ -7,7 +7,7 @@
 // for the toke API, and TKC_PATH points at a stub that answers the way tkc
 // 3.0.0 does (checked by hand on 2026-09-24): `--check --diag-json` prints
 // nothing and exits 0 on a clean file, or one JSON diagnostic per line *on
-// stderr* and exits 1; `--emit-llvm` prints IR and exits 0. (132.81: this
+// stderr* and exits 1; `--emit-llvm --out F` writes IR to F and exits 0. (132.81: this
 // stub used to print the diagnostics on stdout, which tkc does not do.)
 import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -33,7 +33,7 @@ fi
 if [ "$1" = "--emit-llvm" ]; then
   if grep -q LINK_ERR "$f"; then echo "error: undefined symbol" >&2; exit 1; fi
   if grep -q _ERR "$f"; then echo "error: rejected" >&2; exit 1; fi
-  echo "; ModuleID = 'stub'"; exit 0
+  echo "; ModuleID = 'stub'" > "$3"; exit 0
 fi
 exit 2
 `
