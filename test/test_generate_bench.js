@@ -15,46 +15,10 @@ const mockInvokeEndpoint = mock.fn();
 const mockTokeCheck = mock.fn();
 const mockTokeCompile = mock.fn();
 
-// We test tier-gate directly
-const { requireTier } = require("../lib/tier-gate");
-
-// ---------------------------------------------------------------------------
-// Tier gate tests
-// ---------------------------------------------------------------------------
-
-describe("tier-gate", () => {
-  it("allows pro tier when pro is required", () => {
-    assert.doesNotThrow(() => requireTier({ tier: "pro" }, "pro"));
-  });
-
-  it("allows pro tier when free is required", () => {
-    assert.doesNotThrow(() => requireTier({ tier: "pro" }, "free"));
-  });
-
-  it("allows free tier when free is required", () => {
-    assert.doesNotThrow(() => requireTier({ tier: "free" }, "free"));
-  });
-
-  it("rejects free tier when pro is required", () => {
-    const err = assert.throws(() => requireTier({ tier: "free" }, "pro"));
-    assert.match(err.message, /Pro tier API key/);
-    assert.equal(err.code, "TIER_REQUIRED");
-  });
-
-  it("rejects missing context when pro is required", () => {
-    const err = assert.throws(() => requireTier(null, "pro"));
-    assert.match(err.message, /Pro tier API key/);
-  });
-
-  it("rejects undefined tier when pro is required", () => {
-    const err = assert.throws(() => requireTier({}, "pro"));
-    assert.match(err.message, /Pro tier API key/);
-  });
-
-  it("throws on unknown required tier", () => {
-    assert.throws(() => requireTier({ tier: "pro" }, "enterprise"), /Unknown tier/);
-  });
-});
+// There is no tier gate to test. lib/tier-gate.js was a no-op stub ("Auth
+// handled by API Gateway") and server.js never passed an auth context, so the
+// eight assertions that expected it to throw could not pass; the stub and its
+// one call in tools/bench.js are removed (132.72).
 
 // ---------------------------------------------------------------------------
 // toke_generate tests (using inline logic to avoid import-time side effects)
@@ -63,15 +27,6 @@ describe("tier-gate", () => {
 describe("toke_generate", () => {
   // We test the generate logic by calling the module after mocking deps.
   // Since ESM dynamic mocking is tricky, we test the core logic inline.
-
-  it("rejects free tier users", async () => {
-    try {
-      requireTier({ tier: "free" }, "pro");
-      assert.fail("Should have thrown");
-    } catch (err) {
-      assert.match(err.message, /Pro tier API key/);
-    }
-  });
 
   it("handles cold start response", () => {
     // Simulate the cold start logic from generate.js
@@ -165,15 +120,6 @@ describe("toke_generate", () => {
 // ---------------------------------------------------------------------------
 
 describe("toke_bench", () => {
-  it("rejects free tier users", () => {
-    try {
-      requireTier({ tier: "free" }, "pro");
-      assert.fail("Should have thrown");
-    } catch (err) {
-      assert.match(err.message, /Pro tier API key/);
-    }
-  });
-
   it("rejects unknown task_id", async () => {
     // Import BENCHMARK_TASKS to verify task lookup
     const { BENCHMARK_TASKS } = await import("../tools/bench.js");

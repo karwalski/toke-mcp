@@ -1,7 +1,6 @@
 import { dirname } from "node:path";
 import { tokeCheck } from "./check.js";
 import { tokeCompile } from "./compile.js";
-import { requireTier } from "../lib/tier-gate.js";
 
 /**
  * Built-in benchmark tasks with expected outputs and Python baselines.
@@ -141,13 +140,9 @@ export function tokenizerLoaded() {
  * @param {object} params
  * @param {string} params.source - Toke source code to benchmark
  * @param {string} params.task_id - Benchmark task identifier
- * @param {object} [params.context] - Auth context with tier info
  * @returns {Promise<object>}
  */
-export async function tokeBench({ source, task_id, context }) {
-  // Enforce pro tier
-  requireTier(context, "pro");
-
+export async function tokeBench({ source, task_id }) {
   const task = BENCHMARK_TASKS[task_id];
   if (!task) {
     return {
