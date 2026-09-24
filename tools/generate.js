@@ -1,4 +1,5 @@
 import { tokeCheck } from "./check.js";
+import { checkResultDiagnostics } from "../lib/tkc-diagnostics.js";
 import { generate, submitFeedback } from "../lib/api-client.js";
 import { record } from "../lib/telemetry.js";
 
@@ -40,16 +41,10 @@ export async function tokeGenerate({ description, difficulty, max_tokens }) {
   // Run toke_check on the generated code
   const checkResult = await tokeCheck(source);
 
-  const diagnostics = [];
-  if (checkResult.diagnostics) {
-    diagnostics.push(...checkResult.diagnostics);
-  } else if (checkResult.raw && !checkResult.ok) {
-    diagnostics.push({ message: checkResult.raw });
-  } else if (checkResult.error) {
-    diagnostics.push({ message: checkResult.error });
-  }
+  const diagnostics = checkResultDiagnostics(checkResult);
 
-  const compiled = checkResult.ok === true || diagnostics.length === 0;
+  // 132.81: `ok` is the verdict. An empty list is not: tkc can fail silently.
+  const compiled = checkResult.ok === true;
 
   // Record generated code that compiles cleanly
   if (compiled) record(source, "toke_generate", 0);

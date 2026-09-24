@@ -6,8 +6,9 @@
 // Nothing here touches the network or a real compiler: `fetch` is replaced
 // for the toke API, and TKC_PATH points at a stub that answers the way tkc
 // 3.0.0 does (checked by hand on 2026-09-24): `--check --diag-json` prints
-// nothing and exits 0 on a clean file, or one JSON diagnostic per line and
-// exits 1; `--emit-llvm` prints IR and exits 0.
+// nothing and exits 0 on a clean file, or one JSON diagnostic per line *on
+// stderr* and exits 1; `--emit-llvm` prints IR and exits 0. (132.81: this
+// stub used to print the diagnostics on stdout, which tkc does not do.)
 import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync, readFileSync, chmodSync } from "node:fs";
@@ -25,8 +26,8 @@ writeFileSync(
 f="$(eval echo \\$$#)"
 echo "$*" >> '${tkcLog}'
 if [ "$1" = "--check" ]; then
-  if grep -q TWO_ERR "$f"; then echo '${diag("E2001", 1)}'; echo '${diag("E3011", 2)}'; exit 1; fi
-  if grep -q ONE_ERR "$f"; then echo '${diag("E3011", 1)}'; exit 1; fi
+  if grep -q TWO_ERR "$f"; then echo '${diag("E2001", 1)}' >&2; echo '${diag("E3011", 2)}' >&2; exit 1; fi
+  if grep -q ONE_ERR "$f"; then echo '${diag("E3011", 1)}' >&2; exit 1; fi
   exit 0
 fi
 if [ "$1" = "--emit-llvm" ]; then
@@ -65,15 +66,11 @@ beforeEach(() => {
 });
 const tkcCalls = () => readFileSync(tkcLog, "utf-8").split("\n").filter(Boolean).map((l) => l.split(" ")[0]);
 
-// A known defect, filed with 132.76's report: tools/check.js JSON.parse()s
-// tkc's whole stdout, which succeeds only when there is exactly one
-// diagnostic, and then returns that diagnostic bare - no `diagnostics` array,
-// no `ok`. generate.js and bench.js both read that as "no diagnostics".
-// bench.js is saved by its compile step; generate.js has none and reports the
-// rejected program as compiled (reproduced with the real tkc 3.0.0). The
-// `todo` test below states the correct behaviour; it runs and fails visibly
-// without failing the suite.
-const SINGLE_DIAG_DEFECT = "tools/check.js drops a lone diagnostic (filed with 132.76)";
+// 132.81 (filed with 132.76's report): tools/check.js used to JSON.parse()
+// tkc's whole output, which succeeds only with exactly one diagnostic and
+// then returned it bare - no `diagnostics` array, no `ok` - so generate.js
+// reported the rejected program as compiled. The one- and two-diagnostic
+// tests below pin every diagnostic through; test_check.js runs real tkc output.
 
 describe("toke_generate", () => {
   it("returns the API's error as a diagnostic and never runs tkc", async () => {
@@ -119,15 +116,18 @@ describe("toke_generate", () => {
     apiReply = { status: 200, json: { source: "TWO_ERR" } };
     const r = await tokeGenerate({ description: "x" });
     assert.equal(r.compiled, false);
-    assert.ok(r.diagnostics.length > 0);
+    assert.deepEqual(r.diagnostics.map((d) => d.error_code), ["E2001", "E3011"]);
     const fb = requests.find((q) => q.url.endsWith("/v1/feedback"));
     assert.equal(fb.body.compiles, false);
   });
 
-  it("reports a program with exactly one diagnostic as not compiled", { todo: SINGLE_DIAG_DEFECT }, async () => {
+  it("reports a program with exactly one diagnostic as not compiled", async () => {
     apiReply = { status: 200, json: { source: "ONE_ERR" } };
     const r = await tokeGenerate({ description: "x" });
     assert.equal(r.compiled, false);
+    assert.deepEqual(r.diagnostics.map((d) => d.error_code), ["E3011"]);
+    const fb = requests.find((q) => q.url.endsWith("/v1/feedback"));
+    assert.equal(fb.body.compiles, false);
   });
 });
 
@@ -147,7 +147,7 @@ describe("toke_bench", () => {
   it("stops at a failed check: no compile, no test results", async () => {
     const r = await tokeBench({ source: "TWO_ERR", task_id: "fibonacci" });
     assert.equal(r.passed, false);
-    assert.ok(r.diagnostics.length > 0);
+    assert.deepEqual(r.diagnostics.map((d) => d.error_code), ["E2001", "E3011"]);
     assert.deepEqual(r.test_results, []);
     assert.equal(r.baseline_tokens, BENCHMARK_TASKS.fibonacci.baseline_tokens);
     assert.ok(r.token_count > 0);
@@ -177,12 +177,11 @@ describe("toke_bench", () => {
     assert.deepEqual(tkcCalls(), ["--check", "--emit-llvm"]);
   });
 
-  it("does not pass a program with exactly one diagnostic", async () => {
-    // The check step loses the diagnostic (see SINGLE_DIAG_DEFECT); the
-    // compile step is what fails it, as it does with tkc 3.0.0.
+  it("stops at a check with exactly one diagnostic, and reports it", async () => {
     const r = await tokeBench({ source: "ONE_ERR", task_id: "hello-world" });
     assert.equal(r.passed, false);
-    assert.deepEqual(tkcCalls(), ["--check", "--emit-llvm"]);
+    assert.deepEqual(r.diagnostics.map((d) => d.error_code), ["E3011"]);
+    assert.deepEqual(tkcCalls(), ["--check"]);
   });
 
   it("every benchmark task has a description, expected outputs and a positive baseline", () => {

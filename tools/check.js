@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { record } from "../lib/telemetry.js";
+import { parseTkcDiagnostics, hasErrorDiagnostic } from "../lib/tkc-diagnostics.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -12,7 +13,9 @@ const TKC_PATH = process.env.TKC_PATH || "tkc";
 
 /**
  * toke_check tool — accepts Toke source code, runs tkc --check --diag-json,
- * returns JSON diagnostics.
+ * returns { ok, diagnostics, exitCode } with every diagnostic tkc emitted
+ * (132.81). `raw` is added only when tkc printed non-JSON text; `error` only
+ * when tkc could not be run at all.
  */
 export async function tokeCheck(sourceCode) {
   const tmpFile = join(tmpdir(), `toke-check-${randomUUID()}.tk`);
@@ -20,41 +23,36 @@ export async function tokeCheck(sourceCode) {
   try {
     await writeFile(tmpFile, sourceCode, "utf-8");
 
-    const { stdout, stderr } = await execFileAsync(
-      TKC_PATH,
-      ["--check", "--diag-json", tmpFile],
-      { timeout: 10_000 }
-    );
-
-    // tkc --diag-json writes JSON diagnostics to stdout
-    const output = stdout || stderr;
-
+    let stdout = "";
+    let stderr = "";
+    let exitCode = 0;
     try {
-      const parsed = JSON.parse(output);
-      // Record successful checks (no diagnostics = clean code)
-      const errCount = Array.isArray(parsed.diagnostics) ? parsed.diagnostics.length : 0;
-      if (errCount === 0) record(sourceCode, "toke_check", 0);
-      return parsed;
-    } catch {
-      // If output is not valid JSON, wrap it — ok: true means clean check
-      record(sourceCode, "toke_check", 0);
-      return { raw: output.trim(), ok: true };
-    }
-  } catch (err) {
-    // Non-zero exit means diagnostics were produced
-    if (err.stdout || err.stderr) {
-      const output = err.stdout || err.stderr;
-      try {
-        return JSON.parse(output);
-      } catch {
-        return { raw: output.trim(), ok: false, exitCode: err.code };
+      ({ stdout, stderr } = await execFileAsync(
+        TKC_PATH,
+        ["--check", "--diag-json", tmpFile],
+        { timeout: 10_000 }
+      ));
+    } catch (err) {
+      // A non-numeric code (ENOENT, a timeout's signal) means tkc never ran
+      // to completion: there are no diagnostics to report, only the failure.
+      if (typeof err.code !== "number") {
+        return { ok: false, diagnostics: [], error: err.message };
       }
+      stdout = err.stdout || "";
+      stderr = err.stderr || "";
+      exitCode = err.code;
     }
 
-    return {
-      error: err.message,
-      ok: false,
-    };
+    // tkc 3.0.0 writes JSON Lines diagnostics to stderr; read both streams.
+    const { diagnostics, raw } = parseTkcDiagnostics(stderr, stdout);
+    const ok = exitCode === 0 && !hasErrorDiagnostic(diagnostics);
+    if (ok) record(sourceCode, "toke_check", 0);
+
+    const result = { ok, diagnostics, exitCode };
+    if (raw) result.raw = raw;
+    return result;
+  } catch (err) {
+    return { ok: false, diagnostics: [], error: err.message };
   } finally {
     await unlink(tmpFile).catch(() => {});
   }
