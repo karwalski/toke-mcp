@@ -1,33 +1,44 @@
 #!/usr/bin/env node
 /**
- * e2e_repair_loop.js — End-to-end test harness for the generate -> check -> fix -> repeat loop.
+ * e2e_repair_loop.js — End-to-end test of the generate -> check -> fix -> repeat loop.
  *
  * Simulates the Claude Code toke-repair subagent workflow using a rule-based fixer
  * instead of an LLM. Imports toke_check and toke_compile directly (no running MCP
- * server required).
- *
- * NOTE: The rule-based fixer here is a simplified proxy for what the real repair loop
- * does via an LLM. It handles the most common error codes (E1003, E2001, E2003, E3011,
- * E4010/E4031) with pattern-based rewrites. The actual toke-repair subagent in
- * claude-plugin/agents/toke-repair.md uses Claude to interpret diagnostics and apply
- * contextual fixes, achieving higher repair rates.
+ * server required), so it needs a real tkc (TKC_PATH, else `tkc` on PATH) and
+ * nothing else: no network.
  *
  * Fixtures are self-contained below (story 132.74). This harness used to read
  * task YAML from toke-eval/benchmark/hidden_tests/, which workspace AGENTS.md §5
- * makes move/preserve-only; it only ever used each task's id and description,
- * so those now live here with the draft source they index.
+ * makes move/preserve-only.
+ *
+ * 132.84: the fixtures are v0.4 (toke-spec-v0.4.md). Each draft is a correct
+ * v0.4 program with the mistakes a model trained on the legacy syntax makes:
+ * uppercase `M=`/`F=` (E1006), square brackets for arrays and indexing
+ * (E1003), and `=` for equality (E2002). The fixer's scope is exactly those
+ * three, applied at the offsets tkc reports; anything else is out of scope
+ * and ends the loop for that task.
+ *
+ * It asserts, and exits 1 on any failure:
+ *   - every draft is rejected on the first check, with exactly the codes its
+ *     fixture declares (a draft that already compiles would pass vacuously);
+ *   - at least --floor tasks (default: every task run) end with a clean check;
+ *   - every task that passes also compiles (--emit-llvm).
+ * With --run it also builds each repaired program and checks main's exit code
+ * against the fixture's `returns` (slow: about 2s a program).
  *
  * Usage:
- *   node test/e2e_repair_loop.js [--max-iterations 5] [--tasks 20] [--verbose]
- *                                [--out report.json]
+ *   node test/e2e_repair_loop.js [--max-iterations 5] [--tasks 20] [--floor N]
+ *                                [--run] [--verbose] [--out report.json]
  */
 
-import { writeFile } from "node:fs/promises";
+import { writeFile, mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { tokeCheck } from "../tools/check.js";
-import { tokeCompile } from "../tools/compile.js";
+import { execFile, execFileSync } from "node:child_process";
+import { promisify } from "node:util";
 
+const execFileAsync = promisify(execFile);
+const TKC_PATH = process.env.TKC_PATH || "tkc";
 const DEFAULT_RESULTS_PATH = join(tmpdir(), "toke-mcp-e2e_results.json");
 
 // ---------------------------------------------------------------------------
@@ -36,57 +47,39 @@ const DEFAULT_RESULTS_PATH = join(tmpdir(), "toke-mcp-e2e_results.json");
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { maxIterations: 5, tasks: 20, verbose: false, out: DEFAULT_RESULTS_PATH };
+  const opts = { maxIterations: 5, tasks: FIXTURES.length, floor: null, run: false, verbose: false, out: DEFAULT_RESULTS_PATH };
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--out" && args[i + 1]) {
-      opts.out = args[i + 1];
-      i++;
-      continue;
-    }
-    if (args[i] === "--max-iterations" && args[i + 1]) {
-      opts.maxIterations = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === "--tasks" && args[i + 1]) {
-      opts.tasks = parseInt(args[i + 1], 10);
-      i++;
-    } else if (args[i] === "--verbose") {
-      opts.verbose = true;
-    }
+    const next = args[i + 1];
+    if (args[i] === "--out" && next) { opts.out = next; i++; }
+    else if (args[i] === "--max-iterations" && next) { opts.maxIterations = parseInt(next, 10); i++; }
+    else if (args[i] === "--tasks" && next) { opts.tasks = parseInt(next, 10); i++; }
+    else if (args[i] === "--floor" && next) { opts.floor = parseInt(next, 10); i++; }
+    else if (args[i] === "--run") opts.run = true;
+    else if (args[i] === "--verbose") opts.verbose = true;
+    else { console.error(`unknown argument: ${args[i]}`); process.exit(2); }
   }
   return opts;
 }
 
 // ---------------------------------------------------------------------------
 // Task fixtures — local to this file; nothing is read from toke-eval.
+//
+// `first` is what tkc 3.0.0 reports on the draft's first check (lexer errors
+// stop the parse, so an E2002 in a draft that also has E1006 shows up on a
+// later iteration). `returns` is main's exit code once repaired, verified by
+// building and running each repaired program (--run) on 2026-09-24.
 // ---------------------------------------------------------------------------
 
-const DESCRIPTIONS = [
-  "sum of a list", "product of a list", "minimum of a list", "maximum of a list",
-  "integer mean of a list", "a mod b", "integer power", "gcd", "lcm",
-  "primality test", "nth fibonacci", "factorial", "absolute value", "negation",
-  "integer square root", "clamp to a range", "sum of squares",
-  "count even elements", "count odd elements", "sum of positive elements",
-];
-
-function loadTasks(count) {
-  return DESCRIPTIONS.slice(0, count).map((description, i) => ({
-    id: `fixture-${String(i + 1).padStart(2, "0")}`,
-    category: "fixture",
-    description,
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// Naive solution generator — produces intentionally imperfect Toke code
-// from task descriptions, introducing common mistakes that the fixer must
-// repair. This simulates a first-draft LLM generation.
-// ---------------------------------------------------------------------------
-
-const GENERATORS = {
-  "fixture-01": () => `M=solution;
+const FIXTURES = [
+  {
+    id: "fixture-01",
+    returns: 6,
+    description: "sum of a list",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
-  lp(let i=mut.0;i<nums.len;i=i+1){
+  lp(let i=0;i<nums.len;i=i+1){
     sum=sum+nums[i]
   };
   <sum
@@ -95,11 +88,16 @@ F=main():i64{
   let r=solve([1;2;3]);
   <r
 };`,
-
-  "fixture-02": () => `M=solution;
+  },
+  {
+    id: "fixture-02",
+    returns: 24,
+    description: "product of a list",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let prod=mut.1;
-  lp(let i=mut.0;i<nums.len;i=i+1){
+  lp(let i=0;i<nums.len;i=i+1){
     prod=prod*nums[i]
   };
   <prod
@@ -108,11 +106,16 @@ F=main():i64{
   let r=solve([2;3;4]);
   <r
 };`,
-
-  "fixture-03": () => `M=solution;
+  },
+  {
+    id: "fixture-03",
+    returns: 1,
+    description: "minimum of a list",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let m=mut.nums[0];
-  lp(let i=mut.1;i<nums.len;i=i+1){
+  lp(let i=1;i<nums.len;i=i+1){
     if(nums[i]<m){
       m=nums[i]
     }
@@ -123,11 +126,16 @@ F=main():i64{
   let r=solve([5;3;8;1]);
   <r
 };`,
-
-  "fixture-04": () => `M=solution;
+  },
+  {
+    id: "fixture-04",
+    returns: 8,
+    description: "maximum of a list",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let m=mut.nums[0];
-  lp(let i=mut.1;i<nums.len;i=i+1){
+  lp(let i=1;i<nums.len;i=i+1){
     if(nums[i]>m){
       m=nums[i]
     }
@@ -138,11 +146,16 @@ F=main():i64{
   let r=solve([5;3;8;1]);
   <r
 };`,
-
-  "fixture-05": () => `M=solution;
+  },
+  {
+    id: "fixture-05",
+    returns: 2,
+    description: "integer mean of a list",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
-  lp(let i=mut.0;i<nums.len;i=i+1){
+  lp(let i=0;i<nums.len;i=i+1){
     sum=sum+nums[i]
   };
   <sum/nums.len
@@ -151,34 +164,50 @@ F=main():i64{
   let r=solve([1;2;3]);
   <r
 };`,
-
-  "fixture-06": () => `M=solution;
+  },
+  {
+    id: "fixture-06",
+    returns: 1,
+    description: "a mod b",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(a:i64;b:i64):i64{
+  if(b=0){<0};
   <a-a/b*b
 };
 F=main():i64{
   let r=solve(10;3);
   <r
 };`,
-
-  "fixture-07": () => `M=solution;
+  },
+  {
+    id: "fixture-07",
+    returns: 128,
+    description: "integer power",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(base:i64;exp:i64):i64{
   let result=mut.1;
-  lp(let i=mut.0;i<exp;i=i+1){
+  lp(let i=0;i<exp;i=i+1){
     result=result*base
   };
   <result
 };
 F=main():i64{
-  let r=solve(2;10);
+  let r=solve(2;7);
   <r
 };`,
-
-  "fixture-08": () => `M=solution;
+  },
+  {
+    id: "fixture-08",
+    returns: 4,
+    description: "gcd",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(a:i64;b:i64):i64{
   let x=mut.a;
   let y=mut.b;
-  lp(;y>0;){
+  lp(let k=0;y>0;k=k+1){
     let t=y;
     y=x-x/y*y;
     x=t
@@ -189,12 +218,17 @@ F=main():i64{
   let r=solve(12;8);
   <r
 };`,
-
-  "fixture-09": () => `M=solution;
+  },
+  {
+    id: "fixture-09",
+    returns: 12,
+    description: "lcm",
+    first: ["E1006"],
+    draft: `M=solution;
 F=gcd(a:i64;b:i64):i64{
   let x=mut.a;
   let y=mut.b;
-  lp(;y>0;){
+  lp(let k=0;y>0;k=k+1){
     let t=y;
     y=x-x/y*y;
     x=t
@@ -210,12 +244,16 @@ F=main():i64{
   let r=solve(4;6);
   <r
 };`,
-
-  "fixture-10": () => `M=solution;
+  },
+  {
+    id: "fixture-10",
+    returns: 1,
+    description: "primality test",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(n:i64):bool{
   if(n<2){<false};
-  let i=mut.2;
-  lp(;i*i<n+1;i=i+1){
+  lp(let i=2;i*i<n+1;i=i+1){
     if(n-n/i*i=0){<false}
   };
   <true
@@ -224,13 +262,18 @@ F=main():i64{
   if(solve(7)){<1};
   <0
 };`,
-
-  "fixture-11": () => `M=solution;
+  },
+  {
+    id: "fixture-11",
+    returns: 55,
+    description: "nth fibonacci",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(n:i64):i64{
   if(n<2){<n};
   let a=mut.0;
   let b=mut.1;
-  lp(let i=mut.2;i<n+1;i=i+1){
+  lp(let i=2;i<n+1;i=i+1){
     let t=b;
     b=a+b;
     a=t
@@ -241,11 +284,16 @@ F=main():i64{
   let r=solve(10);
   <r
 };`,
-
-  "fixture-12": () => `M=solution;
+  },
+  {
+    id: "fixture-12",
+    returns: 120,
+    description: "factorial",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(n:i64):i64{
   let r=mut.1;
-  lp(let i=mut.1;i<n+1;i=i+1){
+  lp(let i=1;i<n+1;i=i+1){
     r=r*i
   };
   <r
@@ -254,8 +302,13 @@ F=main():i64{
   let r=solve(5);
   <r
 };`,
-
-  "fixture-13": () => `M=solution;
+  },
+  {
+    id: "fixture-13",
+    returns: 5,
+    description: "absolute value",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(n:i64):i64{
   if(n<0){<0-n};
   <n
@@ -264,51 +317,65 @@ F=main():i64{
   let r=solve(0-5);
   <r
 };`,
-
-  "fixture-14": () => `M=solution;
+  },
+  {
+    id: "fixture-14",
+    returns: 42,
+    description: "negation",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(n:i64):i64{
   <0-n
 };
 F=main():i64{
-  let r=solve(42);
+  let r=solve(0-42);
   <r
 };`,
-
-  "fixture-15": () => `M=solution;
-F=solve(n:i64):i64{
+  },
+  {
+    id: "fixture-15",
+    returns: 4,
+    description: "integer square root",
+    first: ["E2002"],
+    draft: `m=solution;
+f=solve(n:i64):i64{
   if(n=0){<0};
   let r=mut.n;
-  let x=mut.n;
-  lp(;x>0;){
-    x=n/r;
-    if(x>r+1){
-      r=(r+x)/2
-    }el{
-      br
-    }
+  lp(let k=0;r*r>n;k=k+1){
+    r=(r+n/r)/2
   };
   <r
 };
-F=main():i64{
+f=main():i64{
   let r=solve(16);
   <r
 };`,
-
-  "fixture-16": () => `M=solution;
+  },
+  {
+    id: "fixture-16",
+    returns: 10,
+    description: "clamp to a range",
+    first: ["E1006"],
+    draft: `M=solution;
 F=solve(v:i64;lo:i64;hi:i64):i64{
   if(v<lo){<lo};
   if(v>hi){<hi};
   <v
 };
 F=main():i64{
-  let r=solve(5;1;10);
+  let r=solve(15;1;10);
   <r
 };`,
-
-  "fixture-17": () => `M=solution;
+  },
+  {
+    id: "fixture-17",
+    returns: 29,
+    description: "sum of squares",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
-  lp(let i=mut.0;i<nums.len;i=i+1){
+  lp(let i=0;i<nums.len;i=i+1){
     sum=sum+nums[i]*nums[i]
   };
   <sum
@@ -317,11 +384,16 @@ F=main():i64{
   let r=solve([2;3;4]);
   <r
 };`,
-
-  "fixture-18": () => `M=solution;
+  },
+  {
+    id: "fixture-18",
+    returns: 3,
+    description: "count even elements",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let count=mut.0;
-  lp(let i=mut.0;i<nums.len;i=i+1){
+  lp(let i=0;i<nums.len;i=i+1){
     if(nums[i]-nums[i]/2*2=0){
       count=count+1
     }
@@ -332,31 +404,37 @@ F=main():i64{
   let r=solve([1;2;3;4;5;6]);
   <r
 };`,
-
-  "fixture-19": () => `M=solution;
-F=solve(nums:[i64]):i64{
+  },
+  {
+    id: "fixture-19",
+    returns: 4,
+    description: "count odd elements",
+    first: ["E1003"],
+    draft: `m=solution;
+f=solve(nums:[i64]):i64{
   let count=mut.0;
-  lp(let i=mut.0;i<nums.len;i=i+1){
+  lp(let i=0;i<nums.len;i=i+1){
     let rem=nums[i]-nums[i]/2*2;
-    if(rem=1){
+    if(rem!=0){
       count=count+1
-    }el{
-      if(rem=0-1){
-        count=count+1
-      }
     }
   };
   <count
 };
-F=main():i64{
-  let r=solve([1;2;3;4;5;6]);
+f=main():i64{
+  let r=solve([1;2;3;4;5;0-7]);
   <r
 };`,
-
-  "fixture-20": () => `M=solution;
+  },
+  {
+    id: "fixture-20",
+    returns: 12,
+    description: "sum of positive elements",
+    first: ["E1003", "E1006"],
+    draft: `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
-  lp(let i=mut.0;i<nums.len;i=i+1){
+  lp(let i=0;i<nums.len;i=i+1){
     if(nums[i]>0){
       sum=sum+nums[i]
     }
@@ -367,348 +445,224 @@ F=main():i64{
   let r=solve([0-3;0;5;0-1;7]);
   <r
 };`,
-};
-
-/**
- * Generate a naive (intentionally broken) Toke solution for a task.
- * Uses predefined templates that introduce common mistakes the fixer
- * must repair.
- */
-function generateNaiveSolution(task) {
-  const gen = GENERATORS[task.id];
-  if (gen) return gen();
-
-  // Fallback: generic template for unknown tasks
-  return `M=solution;
-F=solve(x:i64):i64{
-  <x
-};
-F=main():i64{
-  let r=solve(0);
-  <r
-};`;
-}
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Rule-based fixer — simulates what the LLM would do for common errors.
 //
-// NOTE: This is a simplified proxy. The real repair loop uses an LLM (Claude)
-// to interpret diagnostics contextually and apply semantic fixes. This fixer
-// only handles mechanical pattern-based repairs for the most common error
-// codes encountered in naive Toke generation.
+// Scope (132.84): exactly the three legacy-syntax mistakes the fixtures carry.
+// Every edit is made at the offset tkc reports, after checking the source
+// there is what the rule expects, so a rule can never edit the wrong place.
+//   E1006  uppercase keyword `M=`/`F=`...  -> replace `got` with `expected`
+//   E1003  `[` ... `]`                     -> `x[i]` becomes `x.get(i)`;
+//                                             any other `[a;b]` becomes `@(a;b)`
+//   E2002  "`=` is assignment; use `==`"   -> `=` becomes `==`
+// (tkc's own E1003 `fix` says "replace '[' with '@('", which is wrong for an
+// index: `nums[i]` must become `nums.get(i)`, not `nums@(i)`.)
 // ---------------------------------------------------------------------------
+
+export const FIXER_SCOPE = ["E1006", "E1003", "E2002"];
+
+/** Offset of the `]` matching the `[` at `open`, or -1. */
+function matchingBracket(src, open) {
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === "[") depth++;
+    else if (src[i] === "]" && --depth === 0) return i;
+  }
+  return -1;
+}
+
+function editsFor(src, d) {
+  const at = d.pos?.offset;
+  if (!Number.isInteger(at)) return null;
+  switch (d.error_code) {
+    case "E1006":
+      if (!d.got || !d.expected || src.slice(at, at + d.got.length) !== d.got) return null;
+      return [{ at, len: d.got.length, text: d.expected }];
+    case "E1003": {
+      if (src[at] === "]") return []; // rewritten with its `[`
+      if (src[at] !== "[") return null;
+      const close = matchingBracket(src, at);
+      if (close < 0) return null;
+      const isIndex = /[A-Za-z0-9_)]/.test(src[at - 1] || "");
+      return [
+        { at, len: 1, text: isIndex ? ".get(" : "@(" },
+        { at: close, len: 1, text: ")" },
+      ];
+    }
+    case "E2002":
+      if (!/use `==` for equality/.test(d.message || "") || src[at] !== "=") return null;
+      return [{ at, len: 1, text: "==" }];
+    default:
+      return null;
+  }
+}
 
 function applyFixes(source, diagnostics) {
-  let fixed = source;
+  const edits = [];
   const applied = [];
-
-  // Sort diagnostics by line descending so edits don't shift earlier line numbers
-  const sorted = [...diagnostics].sort((a, b) => (b.line || 0) - (a.line || 0));
-
-  for (const diag of sorted) {
-    const code = diag.code || "";
-    const line = diag.line || 0;
-    const message = diag.message || "";
-    const fix = diag.fix || "";
-
-    // E1003 — invalid character
-    if (code === "E1003") {
-      // Replace underscores with camelCase
-      if (message.includes("_")) {
-        fixed = fixed.replace(/_([a-z])/g, (_, ch) => ch.toUpperCase());
-        applied.push({ code, fix: "replaced _ with camelCase" });
-      }
-      // Replace stray commas with semicolons
-      if (message.includes(",") || fixed.includes(",")) {
-        fixed = fixed.replace(/,/g, ";");
-        applied.push({ code, fix: "replaced , with ;" });
-      }
-      continue;
-    }
-
-    // E2001 — syntax / declaration ordering
-    if (code === "E2001") {
-      // If the fix field suggests something, use it
-      if (fix) {
-        applied.push({ code, fix: `compiler suggests: ${fix}` });
-      }
-      // Try to add missing semicolons after closing braces
-      fixed = fixed.replace(/\}(\s*)(F=|$)/g, "};$1$2");
-      applied.push({ code, fix: "ensured }; after blocks" });
-      continue;
-    }
-
-    // E2002 — unexpected token
-    if (code === "E2002") {
-      if (fix) {
-        applied.push({ code, fix: `compiler suggests: ${fix}` });
-      }
-      continue;
-    }
-
-    // E2003 — missing semicolon
-    if (code === "E2003") {
-      const lines = fixed.split("\n");
-      if (line > 0 && line <= lines.length) {
-        const idx = line - 1;
-        const ln = lines[idx];
-        // Add semicolon at end of line if missing
-        if (!ln.trimEnd().endsWith(";") && !ln.trimEnd().endsWith("{") && !ln.trimEnd().endsWith("}")) {
-          lines[idx] = ln.trimEnd() + ";";
-          fixed = lines.join("\n");
-          applied.push({ code, fix: `added ; at end of line ${line}` });
-        }
-      }
-      continue;
-    }
-
-    // E3011 — undefined identifier
-    if (code === "E3011") {
-      // Extract identifier name from message
-      const match = message.match(/(?:undeclared|undefined|unknown)\s+(?:identifier\s+)?['"]?(\w+)['"]?/i)
-        || message.match(/'(\w+)'/);
-      if (match) {
-        const ident = match[1];
-        // Add a let declaration before the first use
-        const lines = fixed.split("\n");
-        if (line > 0 && line <= lines.length) {
-          const insertIdx = line - 1;
-          const indent = lines[insertIdx].match(/^(\s*)/)[1];
-          lines.splice(insertIdx, 0, `${indent}let ${ident}=mut.0;`);
-          fixed = lines.join("\n");
-          applied.push({ code, fix: `added let ${ident}=mut.0 before line ${line}` });
-        }
-      }
-      continue;
-    }
-
-    // E4010 / E4031 — type mismatch
-    if (code === "E4010" || code === "E4031") {
-      // Try to extract target type from message and add a cast
-      const castMatch = message.match(/expected\s+(\w+)/i);
-      if (castMatch && line > 0) {
-        const targetType = castMatch[1];
-        const lines = fixed.split("\n");
-        if (line <= lines.length) {
-          // Try to wrap the expression on that line with `as targetType`
-          const ln = lines[line - 1];
-          // Look for return expressions: <expr -> <(expr) as type
-          const retMatch = ln.match(/^(\s*)<(.+?)(;?)$/);
-          if (retMatch) {
-            lines[line - 1] = `${retMatch[1]}<(${retMatch[2].trim()}) as ${targetType}${retMatch[3]}`;
-            fixed = lines.join("\n");
-            applied.push({ code, fix: `added as ${targetType} cast at line ${line}` });
-          }
-        }
-      }
-      continue;
-    }
+  const unhandled = [];
+  for (const d of diagnostics) {
+    const e = editsFor(source, d);
+    if (e === null) { unhandled.push(d.error_code); continue; }
+    if (e.length) applied.push({ code: d.error_code, at: d.pos.offset });
+    edits.push(...e);
   }
-
-  return { fixed, applied };
-}
-
-// ---------------------------------------------------------------------------
-// Extract diagnostics array from toke_check result
-// ---------------------------------------------------------------------------
-
-// tkc emits one JSON object per line, with `error_code` and `pos.line`; the
-// fixer below reads `code` and `line`. Normalise to that shape.
-function normaliseDiag(d) {
-  return {
-    ...d,
-    code: d.code || d.error_code || "",
-    line: d.line || (d.pos && d.pos.line) || 0,
-    col: d.col || (d.pos && d.pos.col) || 0,
-  };
-}
-
-function extractDiagnostics(result) {
-  // tokeCheck returns: a parsed object when tkc printed exactly one JSON
-  // document, { raw, ok } when it printed JSON Lines or text, { error } when
-  // tkc could not run. Before 132.74 every shape except an array or
-  // { diagnostics } fell through to [], so a rejected program scored PASS.
-  if (Array.isArray(result)) return result.map(normaliseDiag);
-  if (Array.isArray(result.diagnostics)) return result.diagnostics.map(normaliseDiag);
-  if (result.error_code || result.code) return [normaliseDiag(result)];
-  if (result.error) return [{ code: "TOOL", message: result.error }];
-  if (typeof result.raw === "string") {
-    const diags = [];
-    for (const line of result.raw.split("\n")) {
-      try {
-        const obj = JSON.parse(line);
-        if (obj && (obj.error_code || obj.code)) diags.push(normaliseDiag(obj));
-      } catch {
-        // not a diagnostic line
-      }
-    }
-    if (diags.length > 0) return diags;
+  // Apply from the end so earlier offsets stay valid; drop duplicates.
+  edits.sort((a, b) => b.at - a.at);
+  let fixed = source;
+  let last = Infinity;
+  for (const e of edits) {
+    if (e.at >= last) continue;
+    fixed = fixed.slice(0, e.at) + e.text + fixed.slice(e.at + e.len);
+    last = e.at;
   }
-  if (result.ok === true) return [];
-  return [{ code: "TOOL", message: `unrecognised tkc output: ${JSON.stringify(result).slice(0, 200)}` }];
-}
-
-function hasPassed(diagnostics) {
-  return diagnostics.length === 0
-    || diagnostics.every((d) => !d.code || d.code.startsWith("W"));
+  return { fixed, applied, unhandled };
 }
 
 // ---------------------------------------------------------------------------
 // Repair loop — generate -> check -> fix -> repeat
 // ---------------------------------------------------------------------------
 
+const errorCodes = (r) => r.diagnostics.filter((d) => d.severity !== "warning").map((d) => d.error_code);
+
 async function runRepairLoop(task, maxIterations, verbose) {
-  const taskResult = {
+  const result = {
     task_id: task.id,
-    category: task.category || "unknown",
-    description: task.description || "",
+    description: task.description,
     iterations: 0,
     final_status: "fail",
+    first_codes: [],
     error_codes_seen: [],
-    fixes_applied: [],
+    fixes_applied: 0,
+    unhandled: [],
     compiled: false,
+    source: task.draft,
   };
 
-  let source = generateNaiveSolution(task);
-  const allErrorCodes = new Set();
+  let source = task.draft;
+  const seen = new Set();
 
   for (let iter = 1; iter <= maxIterations; iter++) {
-    taskResult.iterations = iter;
+    result.iterations = iter;
+    const check = await tokeCheck(source);
+    if (check.error) {
+      result.unhandled.push(`TOOL: ${check.error}`);
+      break;
+    }
+    const codes = errorCodes(check);
+    if (iter === 1) result.first_codes = [...new Set(codes)].sort();
+    codes.forEach((c) => seen.add(c));
 
     if (verbose) {
-      console.log(`  [${task.id}] iteration ${iter}`);
+      console.log(`  [${task.id}] iteration ${iter}: ${check.ok ? "clean" : codes.join(" ")}`);
     }
-
-    // Call toke_check directly (no MCP server needed)
-    let checkResult;
-    try {
-      checkResult = await tokeCheck(source);
-    } catch (err) {
-      if (verbose) console.log(`  [${task.id}] toke_check threw: ${err.message}`);
-      taskResult.error_codes_seen = [...allErrorCodes];
-      return taskResult;
-    }
-
-    const diagnostics = extractDiagnostics(checkResult);
-
-    // Collect error codes
-    for (const d of diagnostics) {
-      if (d.code) allErrorCodes.add(d.code);
-    }
-
-    if (verbose && diagnostics.length > 0) {
-      for (const d of diagnostics) {
-        console.log(`    ${d.code || "?"} L${d.line || "?"}:${d.col || "?"} ${d.message || ""}`);
-      }
-    }
-
-    // Check if we passed
-    if (hasPassed(diagnostics)) {
-      taskResult.final_status = "pass";
+    if (check.ok) {
+      result.final_status = "pass";
       break;
     }
 
-    // Apply rule-based fixes
-    const { fixed, applied } = applyFixes(source, diagnostics);
-    taskResult.fixes_applied.push(...applied);
-
-    if (verbose && applied.length > 0) {
-      for (const a of applied) {
-        console.log(`    FIX ${a.code}: ${a.fix}`);
-      }
-    }
-
-    // If no fixes were applied and source did not change, stop early
-    if (fixed === source) {
-      if (verbose) console.log(`  [${task.id}] no fixes applicable, stopping`);
-      break;
-    }
-
+    const { fixed, applied, unhandled } = applyFixes(source, check.diagnostics);
+    result.fixes_applied += applied.length;
+    result.unhandled.push(...unhandled);
+    if (unhandled.length || fixed === source) break; // out of the fixer's scope
     source = fixed;
   }
 
-  taskResult.error_codes_seen = [...allErrorCodes];
-
-  // Optionally compile passing solutions
-  if (taskResult.final_status === "pass") {
-    try {
-      const compileResult = await tokeCompile(source);
-      taskResult.compiled = compileResult.ok === true;
-      if (verbose) {
-        console.log(`  [${task.id}] compile: ${taskResult.compiled ? "OK" : "FAIL"}`);
-      }
-    } catch {
-      taskResult.compiled = false;
-    }
+  result.error_codes_seen = [...seen].sort();
+  result.source = source;
+  if (result.final_status === "pass") {
+    const compiled = await tokeCompile(source);
+    result.compiled = compiled.ok === true;
   }
+  return result;
+}
 
-  return taskResult;
+/** Build the repaired program and return main's exit code. */
+async function runProgram(source, dir, id) {
+  const src = join(dir, `${id}.tk`);
+  const bin = join(dir, id);
+  await writeFile(src, source + "\n", "utf-8");
+  await execFileAsync(TKC_PATH, ["--out", bin, src], { timeout: 60_000 });
+  try {
+    await execFileAsync(bin, [], { timeout: 10_000 });
+    return 0;
+  } catch (err) {
+    return typeof err.code === "number" ? err.code : null;
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
+let tokeCheck, tokeCompile;
+
 async function main() {
   const opts = parseArgs();
-  console.log(`e2e_repair_loop: ${opts.tasks} tasks, max ${opts.maxIterations} iterations`);
-  console.log(`NOTE: rule-based fixer is a simplified proxy; real repair loop uses an LLM\n`);
+  try {
+    execFileSync(TKC_PATH, ["--version"], { stdio: "ignore" });
+  } catch {
+    console.error(`e2e_repair_loop: cannot run tkc at '${TKC_PATH}'. Set TKC_PATH; this test needs a real compiler.`);
+    process.exit(1);
+  }
+  ({ tokeCheck } = await import("../tools/check.js"));
+  ({ tokeCompile } = await import("../tools/compile.js"));
 
-  const tasks = loadTasks(opts.tasks);
+  const tasks = FIXTURES.slice(0, opts.tasks);
+  const floor = opts.floor ?? tasks.length;
+  console.log(`e2e_repair_loop: ${tasks.length} v0.4 fixtures, max ${opts.maxIterations} iterations, floor ${floor}`);
+  console.log(`fixer scope: ${FIXER_SCOPE.join(", ")} (rule-based proxy; the real repair loop uses an LLM)\n`);
 
-  console.log(`Loaded ${tasks.length} tasks\n`);
-
+  const failures = [];
   const results = [];
+  const runDir = opts.run ? await mkdtemp(join(tmpdir(), "toke-e2e-run-")) : null;
   for (const task of tasks) {
-    if (opts.verbose) console.log(`--- ${task.id}: ${task.description} ---`);
-    const result = await runRepairLoop(task, opts.maxIterations, opts.verbose);
-    results.push(result);
-    const status = result.final_status === "pass" ? "PASS" : "FAIL";
-    console.log(`${status}  ${task.id}  iters=${result.iterations}  errors=[${result.error_codes_seen.join(";")}]`);
-  }
-
-  // Summary
-  const passed = results.filter((r) => r.final_status === "pass").length;
-  const total = results.length;
-  const avgIters =
-    results.reduce((s, r) => s + r.iterations, 0) / total;
-
-  // Most common error codes
-  const errorFreq = {};
-  for (const r of results) {
-    for (const code of r.error_codes_seen) {
-      errorFreq[code] = (errorFreq[code] || 0) + 1;
+    const r = await runRepairLoop(task, opts.maxIterations, opts.verbose);
+    results.push(r);
+    const want = [...task.first].sort().join(";");
+    if (r.first_codes.join(";") !== want) {
+      failures.push(`${task.id}: first check gave [${r.first_codes.join(";")}], fixture declares [${want}]`);
     }
+    if (r.final_status === "pass" && !r.compiled) failures.push(`${task.id}: checks clean but does not compile`);
+    if (runDir && r.final_status === "pass") {
+      r.returned = await runProgram(r.source, runDir, task.id);
+      if (r.returned !== task.returns) failures.push(`${task.id}: returned ${r.returned}, expected ${task.returns}`);
+    }
+    const status = r.final_status === "pass" ? "PASS" : "FAIL";
+    const extra = r.unhandled.length ? `  unhandled=[${[...new Set(r.unhandled)].join(";")}]` : "";
+    console.log(`${status}  ${task.id}  iters=${r.iterations}  fixes=${r.fixes_applied}  errors=[${r.error_codes_seen.join(";")}]${extra}`);
   }
-  const topErrors = Object.entries(errorFreq)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([code, count]) => `${code}(${count})`);
+  if (runDir) await rm(runDir, { recursive: true, force: true });
+
+  const passed = results.filter((r) => r.final_status === "pass").length;
+  const compiled = results.filter((r) => r.compiled).length;
+  const total = results.length;
+  if (passed < floor) failures.push(`${passed}/${total} repaired, below the floor of ${floor}`);
 
   console.log(`\n========================================`);
-  console.log(`Results: ${passed}/${total} passed`);
-  console.log(`Average iterations: ${avgIters.toFixed(1)}`);
-  console.log(`Top errors: ${topErrors.join(", ") || "none"}`);
-  console.log(`Compiled: ${results.filter((r) => r.compiled).length}/${passed} passing`);
-  console.log(`========================================\n`);
+  console.log(`Results: ${passed}/${total} repaired (floor ${floor})`);
+  console.log(`Average iterations: ${(results.reduce((s, r) => s + r.iterations, 0) / total).toFixed(1)}`);
+  console.log(`Compiled: ${compiled}/${passed} repaired`);
+  if (opts.run) console.log(`Ran: ${results.filter((r, i) => r.returned === tasks[i].returns).length}/${passed} returned the expected value`);
+  console.log(`========================================`);
 
-  // Write JSON report
   const report = {
     timestamp: new Date().toISOString(),
-    config: { maxIterations: opts.maxIterations, taskCount: total },
-    summary: {
-      passed,
-      total,
-      passRate: `${((passed / total) * 100).toFixed(1)}%`,
-      averageIterations: parseFloat(avgIters.toFixed(1)),
-      topErrors: errorFreq,
-      compiled: results.filter((r) => r.compiled).length,
-    },
+    config: { maxIterations: opts.maxIterations, taskCount: total, floor, run: opts.run },
+    summary: { passed, total, compiled, failures },
     results,
   };
-
   await writeFile(opts.out, JSON.stringify(report, null, 2), "utf-8");
   console.log(`Report written to ${opts.out}`);
+
+  if (failures.length) {
+    console.error(`\nFAILED:\n  ${failures.join("\n  ")}`);
+    process.exit(1);
+  }
+  console.log("OK");
 }
 
 main().catch((err) => {
