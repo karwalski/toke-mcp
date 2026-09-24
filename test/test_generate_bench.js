@@ -1,215 +1,195 @@
-import { describe, it, mock, beforeEach } from "node:test";
+// 132.76: these tests call tools/generate.js and tools/bench.js. Until this
+// story most of them rebuilt the tools' logic inline and asserted on values
+// the test itself had constructed, so no change to either tool could turn
+// them red.
+//
+// Nothing here touches the network or a real compiler: `fetch` is replaced
+// for the toke API, and TKC_PATH points at a stub that answers the way tkc
+// 3.0.0 does (checked by hand on 2026-09-24): `--check --diag-json` prints
+// nothing and exits 0 on a clean file, or one JSON diagnostic per line and
+// exits 1; `--emit-llvm` prints IR and exits 0.
+import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
+import { mkdtempSync, writeFileSync, readFileSync, chmodSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
-const require = createRequire(import.meta.url);
+const dir = mkdtempSync(join(tmpdir(), "toke-mcp-test-"));
+const tkcLog = join(dir, "tkc.log");
+const tkc = join(dir, "tkc");
+const diag = (code, line) =>
+  JSON.stringify({ error_code: code, severity: "error", message: `stub ${code}`, pos: { line, col: 1 } });
+writeFileSync(
+  tkc,
+  `#!/bin/sh
+f="$(eval echo \\$$#)"
+echo "$*" >> '${tkcLog}'
+if [ "$1" = "--check" ]; then
+  if grep -q TWO_ERR "$f"; then echo '${diag("E2001", 1)}'; echo '${diag("E3011", 2)}'; exit 1; fi
+  if grep -q ONE_ERR "$f"; then echo '${diag("E3011", 1)}'; exit 1; fi
+  exit 0
+fi
+if [ "$1" = "--emit-llvm" ]; then
+  if grep -q LINK_ERR "$f"; then echo "error: undefined symbol" >&2; exit 1; fi
+  if grep -q _ERR "$f"; then echo "error: rejected" >&2; exit 1; fi
+  echo "; ModuleID = 'stub'"; exit 0
+fi
+exit 2
+`
+);
+chmodSync(tkc, 0o755);
 
-// ---------------------------------------------------------------------------
-// Mocks — must be set up before importing the modules under test
-// ---------------------------------------------------------------------------
+// Both are read when the tool modules load, so set them before importing.
+process.env.TKC_PATH = tkc;
+process.env.TOKE_API_KEY = "test-key";
+process.env.TOKE_API_URL = "http://toke-api.invalid";
+delete process.env.TOKE_TELEMETRY;
 
-// Mock sagemaker-client
-const mockInvokeEndpoint = mock.fn();
+let apiReply;
+let requests;
+globalThis.fetch = async (url, init) => {
+  const body = JSON.parse(init.body);
+  requests.push({ url: String(url), body });
+  const r = String(url).endsWith("/v1/generate") ? apiReply : { status: 200, json: {} };
+  return { ok: r.status < 400, status: r.status, json: async () => r.json };
+};
 
-// Mock tokeCheck / tokeCompile at the module level
-const mockTokeCheck = mock.fn();
-const mockTokeCompile = mock.fn();
+let tokeGenerate, tokeBench, BENCHMARK_TASKS;
+before(async () => {
+  ({ tokeGenerate } = await import("../tools/generate.js"));
+  ({ tokeBench, BENCHMARK_TASKS } = await import("../tools/bench.js"));
+});
+beforeEach(() => {
+  requests = [];
+  writeFileSync(tkcLog, "");
+});
+const tkcCalls = () => readFileSync(tkcLog, "utf-8").split("\n").filter(Boolean).map((l) => l.split(" ")[0]);
 
-// There is no tier gate to test. lib/tier-gate.js was a no-op stub ("Auth
-// handled by API Gateway") and server.js never passed an auth context, so the
-// eight assertions that expected it to throw could not pass; the stub and its
-// one call in tools/bench.js are removed (132.72).
-
-// ---------------------------------------------------------------------------
-// toke_generate tests (using inline logic to avoid import-time side effects)
-// ---------------------------------------------------------------------------
+// A known defect, filed with 132.76's report: tools/check.js JSON.parse()s
+// tkc's whole stdout, which succeeds only when there is exactly one
+// diagnostic, and then returns that diagnostic bare - no `diagnostics` array,
+// no `ok`. generate.js and bench.js both read that as "no diagnostics".
+// bench.js is saved by its compile step; generate.js has none and reports the
+// rejected program as compiled (reproduced with the real tkc 3.0.0). The
+// `todo` test below states the correct behaviour; it runs and fails visibly
+// without failing the suite.
+const SINGLE_DIAG_DEFECT = "tools/check.js drops a lone diagnostic (filed with 132.76)";
 
 describe("toke_generate", () => {
-  // We test the generate logic by calling the module after mocking deps.
-  // Since ESM dynamic mocking is tricky, we test the core logic inline.
-
-  it("handles cold start response", () => {
-    // Simulate the cold start logic from generate.js
-    const sagemakerResult = {
-      cold_start: true,
-      estimated_wait: 45,
-      generated_text: undefined,
-    };
-
-    if (sagemakerResult.cold_start && !sagemakerResult.generated_text) {
-      const result = {
-        cold_start: true,
-        estimated_wait: sagemakerResult.estimated_wait || 45,
-        message: "Model is warming up...",
-      };
-      assert.equal(result.cold_start, true);
-      assert.equal(result.estimated_wait, 45);
-      assert.equal(result.message, "Model is warming up...");
-    } else {
-      assert.fail("Should have detected cold start");
-    }
+  it("returns the API's error as a diagnostic and never runs tkc", async () => {
+    apiReply = { status: 503, json: { error: "Endpoint is in unexpected state: Failed" } };
+    const r = await tokeGenerate({ description: "add two numbers" });
+    assert.deepEqual(r, {
+      source: null,
+      diagnostics: [{ message: "Endpoint is in unexpected state: Failed" }],
+      compiled: false,
+      tokens_in: 0,
+      tokens_out: 0,
+      toke_bpe_out: 0,
+    });
+    assert.deepEqual(tkcCalls(), []);
   });
 
-  it("returns generated source with diagnostics on success", () => {
-    // Simulate successful generation + check flow
-    const sagemakerResult = {
-      generated_text: "fn main() { io.println($\"Hello\"); }",
-      tokens_used: 42,
-      cold_start: false,
-    };
-
-    const checkResult = { ok: true };
-
-    const source = sagemakerResult.generated_text.trim();
-    const diagnostics = [];
-    const compiled = checkResult.ok === true;
-
-    const result = {
-      source,
-      diagnostics,
-      compiled,
-      tokens_used: sagemakerResult.tokens_used,
-      cold_start: sagemakerResult.cold_start,
-    };
-
-    assert.equal(result.source, "fn main() { io.println($\"Hello\"); }");
-    assert.deepEqual(result.diagnostics, []);
-    assert.equal(result.compiled, true);
-    assert.equal(result.tokens_used, 42);
-    assert.equal(result.cold_start, false);
+  it("trims clean generated source, checks it, and passes the token counts through", async () => {
+    apiReply = { status: 200, json: { source: "  m=s;f=main():i64{<0};\n", tokens_in: 11, tokens_out: 22, toke_bpe_out: 17 } };
+    const r = await tokeGenerate({ description: "return zero" });
+    assert.deepEqual(r, {
+      source: "m=s;f=main():i64{<0};",
+      diagnostics: [],
+      compiled: true,
+      tokens_in: 11,
+      tokens_out: 22,
+      toke_bpe_out: 17,
+    });
+    assert.deepEqual(tkcCalls(), ["--check"]);
+    const fb = requests.find((q) => q.url.endsWith("/v1/feedback"));
+    assert.equal(fb.body.compiles, true);
+    assert.equal(fb.body.prompt, "return zero");
   });
 
-  it("returns diagnostics when generated code has errors", () => {
-    const checkResult = {
-      ok: false,
-      diagnostics: [{ code: "E1001", message: "Unexpected token" }],
-    };
-
-    const diagnostics = [];
-    if (checkResult.diagnostics) {
-      diagnostics.push(...checkResult.diagnostics);
-    }
-
-    assert.equal(diagnostics.length, 1);
-    assert.equal(diagnostics[0].code, "E1001");
+  it("sends the difficulty hint with the description", async () => {
+    apiReply = { status: 200, json: { source: "m=s;" } };
+    await tokeGenerate({ description: "sort a list", difficulty: "hard", max_tokens: 99 });
+    const g = requests.find((q) => q.url === "http://toke-api.invalid/v1/generate");
+    assert.equal(g.body.description, "sort a list\nDifficulty level: hard.");
+    assert.equal(g.body.max_tokens, 99);
   });
 
-  it("handles SageMaker error with no generated text", () => {
-    const sagemakerResult = {
-      error: "Endpoint is in unexpected state: Failed",
-      cold_start: false,
-    };
+  it("reports a program tkc rejects as not compiled", async () => {
+    apiReply = { status: 200, json: { source: "TWO_ERR" } };
+    const r = await tokeGenerate({ description: "x" });
+    assert.equal(r.compiled, false);
+    assert.ok(r.diagnostics.length > 0);
+    const fb = requests.find((q) => q.url.endsWith("/v1/feedback"));
+    assert.equal(fb.body.compiles, false);
+  });
 
-    if (sagemakerResult.error && !sagemakerResult.generated_text) {
-      const result = {
-        source: null,
-        diagnostics: [{ message: sagemakerResult.error }],
-        compiled: false,
-        tokens_used: 0,
-        cold_start: false,
-      };
-      assert.equal(result.source, null);
-      assert.equal(result.compiled, false);
-      assert.equal(result.diagnostics[0].message, sagemakerResult.error);
-    }
+  it("reports a program with exactly one diagnostic as not compiled", { todo: SINGLE_DIAG_DEFECT }, async () => {
+    apiReply = { status: 200, json: { source: "ONE_ERR" } };
+    const r = await tokeGenerate({ description: "x" });
+    assert.equal(r.compiled, false);
   });
 });
 
-// ---------------------------------------------------------------------------
-// toke_bench tests
-// ---------------------------------------------------------------------------
-
 describe("toke_bench", () => {
-  it("rejects unknown task_id", async () => {
-    // Import BENCHMARK_TASKS to verify task lookup
-    const { BENCHMARK_TASKS } = await import("../tools/bench.js");
+  const ratio = (r) => parseFloat((r.token_count / r.baseline_tokens).toFixed(2));
 
-    assert.equal(BENCHMARK_TASKS["nonexistent-task"], undefined);
-    assert.ok(BENCHMARK_TASKS["hello-world"]);
-    assert.ok(BENCHMARK_TASKS["fizzbuzz"]);
-    assert.ok(BENCHMARK_TASKS["fibonacci"]);
-    assert.ok(BENCHMARK_TASKS["reverse-string"]);
+  it("rejects an unknown task_id, naming the known ones, without running tkc", async () => {
+    const r = await tokeBench({ source: "m=s;", task_id: "nonexistent-task" });
+    assert.equal(r.passed, false);
+    assert.equal(
+      r.error,
+      "Unknown benchmark task: nonexistent-task. Available: hello-world, fizzbuzz, fibonacci, reverse-string",
+    );
+    assert.deepEqual(tkcCalls(), []);
   });
 
-  it("calculates token ratio correctly", () => {
-    const source = "fn main() { io.println($\"Hello, world!\"); }";
-    const tokenCount = Math.ceil(source.length / 4);
-    const baselineTokens = 18;
-    const ratio = parseFloat((tokenCount / baselineTokens).toFixed(2));
-
-    assert.equal(typeof ratio, "number");
-    assert.ok(ratio > 0);
+  it("stops at a failed check: no compile, no test results", async () => {
+    const r = await tokeBench({ source: "TWO_ERR", task_id: "fibonacci" });
+    assert.equal(r.passed, false);
+    assert.ok(r.diagnostics.length > 0);
+    assert.deepEqual(r.test_results, []);
+    assert.equal(r.baseline_tokens, BENCHMARK_TASKS.fibonacci.baseline_tokens);
+    assert.ok(r.token_count > 0);
+    assert.equal(r.token_ratio, ratio(r));
+    assert.deepEqual(tkcCalls(), ["--check"]);
   });
 
-  it("reports check failures with diagnostics", () => {
-    const source = "invalid code";
-    const tokenCount = Math.ceil(source.length / 4);
-    const baselineTokens = 18;
-
-    const checkResult = {
-      ok: false,
-      diagnostics: [{ code: "E1001", message: "Syntax error" }],
-    };
-
-    const diagnostics = [];
-    if (checkResult.diagnostics) {
-      diagnostics.push(...checkResult.diagnostics);
-    }
-
-    const result = {
-      passed: false,
-      token_count: tokenCount,
-      baseline_tokens: baselineTokens,
-      token_ratio: parseFloat((tokenCount / baselineTokens).toFixed(2)),
-      diagnostics,
-      test_results: [],
-    };
-
-    assert.equal(result.passed, false);
-    assert.equal(result.diagnostics.length, 1);
-    assert.equal(result.test_results.length, 0);
+  it("reports a compile failure after a clean check", async () => {
+    const r = await tokeBench({ source: "m=s; LINK_ERR", task_id: "hello-world" });
+    assert.equal(r.passed, false);
+    assert.deepEqual(r.diagnostics, [{ message: "error: undefined symbol" }]);
+    assert.deepEqual(r.test_results, []);
+    assert.deepEqual(tkcCalls(), ["--check", "--emit-llvm"]);
   });
 
-  it("reports compilation success with test results", () => {
-    const task = {
-      inputs: ["hello"],
-      expected: ["olleh"],
-      baseline_tokens: 35,
-    };
-
-    const source = 'fn reverse($s) -> $result { /* ... */ }';
-    const tokenCount = Math.ceil(source.length / 4);
-
-    const testResults = task.expected.map((exp, i) => ({
-      input: task.inputs[i] || null,
-      expected: exp,
-      actual: null,
-      passed: null,
-    }));
-
-    const result = {
-      passed: true,
-      token_count: tokenCount,
-      baseline_tokens: task.baseline_tokens,
-      token_ratio: parseFloat((tokenCount / task.baseline_tokens).toFixed(2)),
-      diagnostics: [],
-      test_results: testResults,
-    };
-
-    assert.equal(result.passed, true);
-    assert.equal(result.test_results.length, 1);
-    assert.equal(result.test_results[0].input, "hello");
-    assert.equal(result.test_results[0].expected, "olleh");
+  it("passes a program that checks and compiles, with one unexecuted result per expected output", async () => {
+    const r = await tokeBench({ source: "m=s;f=main():i64{<0};", task_id: "reverse-string" });
+    assert.equal(r.passed, true);
+    assert.deepEqual(r.diagnostics, []);
+    assert.deepEqual(r.test_results, [
+      { input: "hello", expected: "olleh", actual: null, passed: null },
+      { input: "world", expected: "dlrow", actual: null, passed: null },
+      { input: "toke", expected: "ekot", actual: null, passed: null },
+    ]);
+    assert.equal(r.baseline_tokens, 12);
+    assert.equal(r.token_ratio, ratio(r));
+    assert.deepEqual(tkcCalls(), ["--check", "--emit-llvm"]);
   });
 
-  it("includes all benchmark tasks with baseline tokens", async () => {
-    const { BENCHMARK_TASKS } = await import("../tools/bench.js");
+  it("does not pass a program with exactly one diagnostic", async () => {
+    // The check step loses the diagnostic (see SINGLE_DIAG_DEFECT); the
+    // compile step is what fails it, as it does with tkc 3.0.0.
+    const r = await tokeBench({ source: "ONE_ERR", task_id: "hello-world" });
+    assert.equal(r.passed, false);
+    assert.deepEqual(tkcCalls(), ["--check", "--emit-llvm"]);
+  });
 
+  it("every benchmark task has a description, expected outputs and a positive baseline", () => {
     for (const [id, task] of Object.entries(BENCHMARK_TASKS)) {
       assert.ok(task.description, `${id} should have a description`);
-      assert.ok(Array.isArray(task.expected), `${id} should have expected outputs`);
-      assert.ok(typeof task.baseline_tokens === "number", `${id} should have baseline_tokens`);
-      assert.ok(task.baseline_tokens > 0, `${id} baseline_tokens should be positive`);
+      assert.ok(Array.isArray(task.expected) && task.expected.length > 0, `${id} should have expected outputs`);
+      assert.ok(Number.isInteger(task.baseline_tokens) && task.baseline_tokens > 0, `${id} baseline_tokens`);
     }
   });
 });

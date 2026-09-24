@@ -12,20 +12,23 @@
  * claude-plugin/agents/toke-repair.md uses Claude to interpret diagnostics and apply
  * contextual fixes, achieving higher repair rates.
  *
+ * Fixtures are self-contained below (story 132.74). This harness used to read
+ * task YAML from toke-eval/benchmark/hidden_tests/, which workspace AGENTS.md §5
+ * makes move/preserve-only; it only ever used each task's id and description,
+ * so those now live here with the draft source they index.
+ *
  * Usage:
  *   node test/e2e_repair_loop.js [--max-iterations 5] [--tasks 20] [--verbose]
+ *                                [--out report.json]
  */
 
-import { readFile, writeFile, readdir } from "node:fs/promises";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { parse as parseYaml } from "./yaml_mini.js";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { tokeCheck } from "../tools/check.js";
 import { tokeCompile } from "../tools/compile.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const BENCHMARK_DIR = join(__dirname, "../../toke-eval/benchmark/hidden_tests");
-const RESULTS_PATH = join(__dirname, "data/e2e_results.json");
+const DEFAULT_RESULTS_PATH = join(tmpdir(), "toke-mcp-e2e_results.json");
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -33,8 +36,13 @@ const RESULTS_PATH = join(__dirname, "data/e2e_results.json");
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { maxIterations: 5, tasks: 20, verbose: false };
+  const opts = { maxIterations: 5, tasks: 20, verbose: false, out: DEFAULT_RESULTS_PATH };
   for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--out" && args[i + 1]) {
+      opts.out = args[i + 1];
+      i++;
+      continue;
+    }
     if (args[i] === "--max-iterations" && args[i + 1]) {
       opts.maxIterations = parseInt(args[i + 1], 10);
       i++;
@@ -49,22 +57,23 @@ function parseArgs() {
 }
 
 // ---------------------------------------------------------------------------
-// Task loading — reads YAML task files from toke-eval/benchmark/hidden_tests/
+// Task fixtures — local to this file; nothing is read from toke-eval.
 // ---------------------------------------------------------------------------
 
-async function loadTasks(count) {
-  const files = (await readdir(BENCHMARK_DIR))
-    .filter((f) => f.endsWith(".yaml"))
-    .sort();
-  const selected = files.slice(0, count);
+const DESCRIPTIONS = [
+  "sum of a list", "product of a list", "minimum of a list", "maximum of a list",
+  "integer mean of a list", "a mod b", "integer power", "gcd", "lcm",
+  "primality test", "nth fibonacci", "factorial", "absolute value", "negation",
+  "integer square root", "clamp to a range", "sum of squares",
+  "count even elements", "count odd elements", "sum of positive elements",
+];
 
-  const tasks = [];
-  for (const file of selected) {
-    const raw = await readFile(join(BENCHMARK_DIR, file), "utf-8");
-    const task = parseYaml(raw);
-    tasks.push(task);
-  }
-  return tasks;
+function loadTasks(count) {
+  return DESCRIPTIONS.slice(0, count).map((description, i) => ({
+    id: `fixture-${String(i + 1).padStart(2, "0")}`,
+    category: "fixture",
+    description,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -74,7 +83,7 @@ async function loadTasks(count) {
 // ---------------------------------------------------------------------------
 
 const GENERATORS = {
-  "task-a-0001": () => `M=solution;
+  "fixture-01": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
   lp(let i=mut.0;i<nums.len;i=i+1){
@@ -87,7 +96,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0002": () => `M=solution;
+  "fixture-02": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let prod=mut.1;
   lp(let i=mut.0;i<nums.len;i=i+1){
@@ -100,7 +109,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0003": () => `M=solution;
+  "fixture-03": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let m=mut.nums[0];
   lp(let i=mut.1;i<nums.len;i=i+1){
@@ -115,7 +124,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0004": () => `M=solution;
+  "fixture-04": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let m=mut.nums[0];
   lp(let i=mut.1;i<nums.len;i=i+1){
@@ -130,7 +139,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0005": () => `M=solution;
+  "fixture-05": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
   lp(let i=mut.0;i<nums.len;i=i+1){
@@ -143,7 +152,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0006": () => `M=solution;
+  "fixture-06": () => `M=solution;
 F=solve(a:i64;b:i64):i64{
   <a-a/b*b
 };
@@ -152,7 +161,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0007": () => `M=solution;
+  "fixture-07": () => `M=solution;
 F=solve(base:i64;exp:i64):i64{
   let result=mut.1;
   lp(let i=mut.0;i<exp;i=i+1){
@@ -165,7 +174,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0008": () => `M=solution;
+  "fixture-08": () => `M=solution;
 F=solve(a:i64;b:i64):i64{
   let x=mut.a;
   let y=mut.b;
@@ -181,7 +190,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0009": () => `M=solution;
+  "fixture-09": () => `M=solution;
 F=gcd(a:i64;b:i64):i64{
   let x=mut.a;
   let y=mut.b;
@@ -202,7 +211,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0010": () => `M=solution;
+  "fixture-10": () => `M=solution;
 F=solve(n:i64):bool{
   if(n<2){<false};
   let i=mut.2;
@@ -216,7 +225,7 @@ F=main():i64{
   <0
 };`,
 
-  "task-a-0011": () => `M=solution;
+  "fixture-11": () => `M=solution;
 F=solve(n:i64):i64{
   if(n<2){<n};
   let a=mut.0;
@@ -233,7 +242,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0012": () => `M=solution;
+  "fixture-12": () => `M=solution;
 F=solve(n:i64):i64{
   let r=mut.1;
   lp(let i=mut.1;i<n+1;i=i+1){
@@ -246,7 +255,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0013": () => `M=solution;
+  "fixture-13": () => `M=solution;
 F=solve(n:i64):i64{
   if(n<0){<0-n};
   <n
@@ -256,7 +265,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0014": () => `M=solution;
+  "fixture-14": () => `M=solution;
 F=solve(n:i64):i64{
   <0-n
 };
@@ -265,7 +274,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0015": () => `M=solution;
+  "fixture-15": () => `M=solution;
 F=solve(n:i64):i64{
   if(n=0){<0};
   let r=mut.n;
@@ -285,7 +294,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0016": () => `M=solution;
+  "fixture-16": () => `M=solution;
 F=solve(v:i64;lo:i64;hi:i64):i64{
   if(v<lo){<lo};
   if(v>hi){<hi};
@@ -296,7 +305,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0017": () => `M=solution;
+  "fixture-17": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
   lp(let i=mut.0;i<nums.len;i=i+1){
@@ -309,7 +318,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0018": () => `M=solution;
+  "fixture-18": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let count=mut.0;
   lp(let i=mut.0;i<nums.len;i=i+1){
@@ -324,7 +333,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0019": () => `M=solution;
+  "fixture-19": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let count=mut.0;
   lp(let i=mut.0;i<nums.len;i=i+1){
@@ -344,7 +353,7 @@ F=main():i64{
   <r
 };`,
 
-  "task-a-0020": () => `M=solution;
+  "fixture-20": () => `M=solution;
 F=solve(nums:[i64]):i64{
   let sum=mut.0;
   lp(let i=mut.0;i<nums.len;i=i+1){
@@ -503,13 +512,40 @@ function applyFixes(source, diagnostics) {
 // Extract diagnostics array from toke_check result
 // ---------------------------------------------------------------------------
 
+// tkc emits one JSON object per line, with `error_code` and `pos.line`; the
+// fixer below reads `code` and `line`. Normalise to that shape.
+function normaliseDiag(d) {
+  return {
+    ...d,
+    code: d.code || d.error_code || "",
+    line: d.line || (d.pos && d.pos.line) || 0,
+    col: d.col || (d.pos && d.pos.col) || 0,
+  };
+}
+
 function extractDiagnostics(result) {
-  // Result may be: { diagnostics: [...] }, [...], { ok: true }, { error: ... }
-  if (Array.isArray(result)) return result;
-  if (Array.isArray(result.diagnostics)) return result.diagnostics;
-  if (result.ok === true || (result.raw && result.ok !== false)) return [];
+  // tokeCheck returns: a parsed object when tkc printed exactly one JSON
+  // document, { raw, ok } when it printed JSON Lines or text, { error } when
+  // tkc could not run. Before 132.74 every shape except an array or
+  // { diagnostics } fell through to [], so a rejected program scored PASS.
+  if (Array.isArray(result)) return result.map(normaliseDiag);
+  if (Array.isArray(result.diagnostics)) return result.diagnostics.map(normaliseDiag);
+  if (result.error_code || result.code) return [normaliseDiag(result)];
   if (result.error) return [{ code: "TOOL", message: result.error }];
-  return [];
+  if (typeof result.raw === "string") {
+    const diags = [];
+    for (const line of result.raw.split("\n")) {
+      try {
+        const obj = JSON.parse(line);
+        if (obj && (obj.error_code || obj.code)) diags.push(normaliseDiag(obj));
+      } catch {
+        // not a diagnostic line
+      }
+    }
+    if (diags.length > 0) return diags;
+  }
+  if (result.ok === true) return [];
+  return [{ code: "TOOL", message: `unrecognised tkc output: ${JSON.stringify(result).slice(0, 200)}` }];
 }
 
 function hasPassed(diagnostics) {
@@ -618,13 +654,7 @@ async function main() {
   console.log(`e2e_repair_loop: ${opts.tasks} tasks, max ${opts.maxIterations} iterations`);
   console.log(`NOTE: rule-based fixer is a simplified proxy; real repair loop uses an LLM\n`);
 
-  let tasks;
-  try {
-    tasks = await loadTasks(opts.tasks);
-  } catch (err) {
-    console.error(`Failed to load tasks from ${BENCHMARK_DIR}: ${err.message}`);
-    process.exit(1);
-  }
+  const tasks = loadTasks(opts.tasks);
 
   console.log(`Loaded ${tasks.length} tasks\n`);
 
@@ -677,8 +707,8 @@ async function main() {
     results,
   };
 
-  await writeFile(RESULTS_PATH, JSON.stringify(report, null, 2), "utf-8");
-  console.log(`Report written to ${RESULTS_PATH}`);
+  await writeFile(opts.out, JSON.stringify(report, null, 2), "utf-8");
+  console.log(`Report written to ${opts.out}`);
 }
 
 main().catch((err) => {
