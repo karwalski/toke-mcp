@@ -393,7 +393,10 @@ export function createApp(options = {}) {
       }
     }
 
-    await session.transport.handlePostMessage(req, res);
+    // express.json() above has already consumed the request stream, so the
+    // parsed body must be handed over; without it the transport tries to read
+    // the drained stream and answers every message 400 (132.72).
+    await session.transport.handlePostMessage(req, res, req.body);
   });
 
   return app;
