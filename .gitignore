@@ -21,3 +21,6 @@ vscode-toke/out/*.js.map
 # Editor files
 .vscode/settings.json
 .idea/
+
+# Scratch LLVM IR (workspace AGENTS.md §4.4)
+*.ll

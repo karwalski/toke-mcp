@@ -16,8 +16,9 @@
   ],
   "scripts": {
     "start": "node server.js",
-    "test": "npm run test:unit && npm run test:compat",
+    "test": "npm run test:unit && npm run test:e2e && npm run test:compat",
     "test:unit": "node --test test/test_*.js",
+    "test:e2e": "node test/e2e_repair_loop.js",
     "test:compat": "bash test/compatibility/run_compat.sh",
     "prepublishOnly": "node bin/toke-mcp.js --help"
   },

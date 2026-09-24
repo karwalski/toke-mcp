@@ -1,0 +1,2 @@
+m=s;
+f=main():i64{let def=0;let elif=1;<def+elif};

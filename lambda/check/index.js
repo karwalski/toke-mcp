@@ -35,20 +35,14 @@ exports.handler = async (event) => {
         TIMEOUT_MS,
       );
 
-      // tkc --diag-json writes JSON diagnostics to stdout
-      let diagnostics = [];
-      if (stdout.trim().length > 0) {
-        try {
-          diagnostics = JSON.parse(stdout);
-        } catch {
-          // If JSON parse fails, return raw output
-          return response(200, {
-            ok: false,
-            diagnostics: [],
-            raw: stdout,
-            stderr: stderr || undefined,
-          });
-        }
+      const diagnostics = parseDiagnostics(stderr, stdout);
+      if (exitCode !== 0 && diagnostics.length === 0) {
+        // tkc failed without a structured diagnostic: return its text
+        return response(200, {
+          ok: false,
+          diagnostics: [],
+          raw: (stderr || stdout).trim(),
+        });
       }
 
       const ok = exitCode === 0 && diagnostics.every((d) => d.severity !== "error");
@@ -90,6 +84,28 @@ function run(cmd, args, timeoutMs) {
       },
     );
   });
+}
+
+/**
+ * tkc writes diagnostics as JSON Lines on stderr (132.81): one object per
+ * line. Parse every line of both streams; JSON.parse over the whole stream
+ * works only for exactly one diagnostic.
+ */
+function parseDiagnostics(...streams) {
+  const diagnostics = [];
+  for (const stream of streams) {
+    for (const line of String(stream || "").split(/\r?\n/)) {
+      const t = line.trim();
+      if (!t.startsWith("{")) continue;
+      try {
+        const d = JSON.parse(t);
+        if (d && typeof d === "object" && !Array.isArray(d)) diagnostics.push(d);
+      } catch {
+        // not a diagnostic line
+      }
+    }
+  }
+  return diagnostics;
 }
 
 function response(statusCode, body) {

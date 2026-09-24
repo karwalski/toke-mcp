@@ -1,0 +1,1 @@
+{"schema_version":"1.0","diagnostic_id":"D0001","error_code":"E4031","severity":"error","stage":"type_check","message":"type mismatch: expected 'i64', got 'str'","file":"one.tk","pos":{"offset":18,"line":2,"col":14},"span_start":18,"span_end":18,"context":[],"expected":"i64","got":"str","fix":"","source_line":"f=main():i64{<\"x\"};"}

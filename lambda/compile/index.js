@@ -51,14 +51,7 @@ exports.handler = async (event) => {
         TIMEOUT_MS,
       );
 
-      let diagnostics = [];
-      if (diagResult.stdout.trim().length > 0) {
-        try {
-          diagnostics = JSON.parse(diagResult.stdout);
-        } catch {
-          // Fall through with empty diagnostics
-        }
-      }
+      const diagnostics = parseDiagnostics(diagResult.stderr, diagResult.stdout);
 
       return response(200, {
         ok: false,
@@ -105,6 +98,28 @@ function run(cmd, args, timeoutMs) {
       },
     );
   });
+}
+
+/**
+ * tkc writes diagnostics as JSON Lines on stderr (132.81): one object per
+ * line. Parse every line of both streams; JSON.parse over the whole stream
+ * works only for exactly one diagnostic.
+ */
+function parseDiagnostics(...streams) {
+  const diagnostics = [];
+  for (const stream of streams) {
+    for (const line of String(stream || "").split(/\r?\n/)) {
+      const t = line.trim();
+      if (!t.startsWith("{")) continue;
+      try {
+        const d = JSON.parse(t);
+        if (d && typeof d === "object" && !Array.isArray(d)) diagnostics.push(d);
+      } catch {
+        // not a diagnostic line
+      }
+    }
+  }
+  return diagnostics;
 }
 
 function response(statusCode, body) {

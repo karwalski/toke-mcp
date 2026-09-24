@@ -1,5 +1,6 @@
 import { dirname } from "node:path";
 import { tokeCheck } from "./check.js";
+import { checkResultDiagnostics } from "../lib/tkc-diagnostics.js";
 import { tokeCompile } from "./compile.js";
 
 /**
@@ -156,16 +157,10 @@ export async function tokeBench({ source, task_id }) {
   // Step 1: Run toke_check
   const checkResult = await tokeCheck(source);
 
-  const diagnostics = [];
-  if (checkResult.diagnostics) {
-    diagnostics.push(...checkResult.diagnostics);
-  } else if (checkResult.raw && !checkResult.ok) {
-    diagnostics.push({ message: checkResult.raw });
-  } else if (checkResult.error) {
-    diagnostics.push({ message: checkResult.error });
-  }
+  const diagnostics = checkResultDiagnostics(checkResult);
 
-  const checkPassed = checkResult.ok === true || (diagnostics.length === 0);
+  // 132.81: `ok` is the verdict. An empty list is not: tkc can fail silently.
+  const checkPassed = checkResult.ok === true;
 
   if (!checkPassed) {
     return {
@@ -182,8 +177,8 @@ export async function tokeBench({ source, task_id }) {
   const compileResult = await tokeCompile(source);
 
   if (!compileResult.ok) {
-    const compileDiags = compileResult.diagnostics
-      ? (Array.isArray(compileResult.diagnostics) ? compileResult.diagnostics : [compileResult.diagnostics])
+    const compileDiags = compileResult.diagnostics?.length
+      ? compileResult.diagnostics
       : [{ message: compileResult.error || "Compilation failed" }];
     diagnostics.push(...compileDiags);
 
