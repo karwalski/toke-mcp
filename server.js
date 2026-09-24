@@ -154,8 +154,8 @@ export function createMcpServer(options = {}) {
 
   server.tool(
     "toke_migrate",
-    "Migrate legacy 80-char syntax toke code to the 56-char default syntax using tkc --migrate.",
-    { source: z.string().describe("Legacy 80-char syntax toke source code to migrate") },
+    "Migrate legacy 86-char syntax toke code to the 59-char default syntax using tkc --migrate.",
+    { source: z.string().describe("Legacy 86-char syntax toke source code to migrate") },
     async ({ source }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeMigrate(source), null, 2) }],
     })

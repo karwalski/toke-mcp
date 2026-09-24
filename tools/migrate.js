@@ -10,8 +10,8 @@ const execFileAsync = promisify(execFile);
 const TKC_PATH = process.env.TKC_PATH || "tkc";
 
 /**
- * toke_migrate tool — accepts legacy 80-char syntax toke code, runs
- * tkc --migrate, returns the migrated 56-char default syntax source.
+ * toke_migrate tool — accepts legacy 86-char syntax toke code, runs
+ * tkc --migrate, returns the migrated 59-char default syntax source.
  */
 export async function tokeMigrate(sourceCode) {
   const tmpFile = join(tmpdir(), `toke-migrate-${randomUUID()}.tk`);
