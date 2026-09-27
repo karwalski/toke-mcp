@@ -127,11 +127,15 @@ describe("toke_compile against recorded tkc 3.0.0 output", () => {
 
 describe("toke_check against a real tkc", { skip: REAL_TKC ? false : "no tkc found (set TOKE_TKC)" }, () => {
   for (const [name, want] of Object.entries(EXPECT)) {
-    it(`${name}: ok=${want.ok}, ${want.codes.length} diagnostic(s)`, async () => {
+    // tkc after 3.0.0 no longer warns W1020 on identifiers that merely spell a
+    // foreign keyword (`let def=0`, toke story 138.10 N-4), so the live run of
+    // warn.tk is clean; the replay above keeps 3.0.0's recorded warnings.
+    const live = name === "warn" ? { ...want, codes: [] } : want;
+    it(`${name}: ok=${live.ok}, ${live.codes.length} diagnostic(s)`, async () => {
       mode("real");
       const r = await tokeCheck(src(name));
-      assert.equal(r.ok, want.ok);
-      assert.deepEqual(codes(r), want.codes);
+      assert.equal(r.ok, live.ok);
+      assert.deepEqual(codes(r), live.codes);
     });
   }
 
