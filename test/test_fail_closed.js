@@ -53,12 +53,12 @@ describe("store failure refuses (TOK-01)", () => {
 
     it(`connection count throws when the store fails (${how})`, async () => {
       breakStore(how);
-      await assert.rejects(getConnectionCount("1.1.1.1"));
+      await assert.rejects(getConnectionCount("192.0.2.1"));
     });
 
     it(`connection limit refuses with 503 when the store fails (${how})`, async () => {
       breakStore(how);
-      const r = await checkConnectionLimit({ clientIp: "1.1.1.1" });
+      const r = await checkConnectionLimit({ clientIp: "192.0.2.1" });
       assert.equal(r.allowed, false);
       assert.equal(r.statusCode, 503);
     });
@@ -66,7 +66,7 @@ describe("store failure refuses (TOK-01)", () => {
 
   it("tool middleware answers 503 with Retry-After when the store fails", async () => {
     breakStore("command");
-    const r = await checkToolRateLimit({ tool: "toke_check", clientIp: "2.2.2.2" });
+    const r = await checkToolRateLimit({ tool: "toke_check", clientIp: "192.0.2.2" });
     assert.equal(r.allowed, false);
     assert.equal(r.statusCode, 503);
     assert.ok(Number(r.headers["Retry-After"]) >= 1);
@@ -80,10 +80,10 @@ describe("client-chosen tool names share one bucket", () => {
     const cfg = { limit: 2, windowSec: 60 };
     const r = [];
     for (const tool of ["nope_1", "nope_2", "nope_3"]) {
-      r.push((await checkToolRateLimit({ tool, clientIp: "3.3.3.3", config: cfg, knownTools: known })).allowed);
+      r.push((await checkToolRateLimit({ tool, clientIp: "192.0.2.3", config: cfg, knownTools: known })).allowed);
     }
     assert.deepEqual(r, [true, true, false]);
-    const k = await checkToolRateLimit({ tool: "toke_check", clientIp: "3.3.3.3", config: cfg, knownTools: known });
+    const k = await checkToolRateLimit({ tool: "toke_check", clientIp: "192.0.2.3", config: cfg, knownTools: known });
     assert.equal(k.allowed, true, "a known tool keeps its own bucket");
   });
 });
@@ -111,8 +111,8 @@ describe("configuration that does not parse keeps the default", () => {
       const { registerConnection } = require("./lib/connection-registry.cjs");
       const { checkConnectionLimit } = require("./lib/rate-limit-middleware.cjs");
       (async () => {
-        for (let i = 0; i < 5; i++) await registerConnection("c" + i, { ip: "4.4.4.4" });
-        const r = await checkConnectionLimit({ clientIp: "4.4.4.4" });
+        for (let i = 0; i < 5; i++) await registerConnection("c" + i, { ip: "192.0.2.4" });
+        const r = await checkConnectionLimit({ clientIp: "192.0.2.4" });
         console.log(r.allowed ? "allowed" : "refused");
       })();`);
     assert.equal(out.split("\n").pop(), "refused");
@@ -123,7 +123,7 @@ describe("configuration that does not parse keeps the default", () => {
       const { checkToolRateLimit } = require("./lib/rate-limit-middleware.cjs");
       (async () => {
         let last;
-        for (let i = 0; i < 101; i++) last = await checkToolRateLimit({ tool: "t", clientIp: "5.5.5.5" });
+        for (let i = 0; i < 101; i++) last = await checkToolRateLimit({ tool: "t", clientIp: "192.0.2.5" });
         console.log(last.allowed ? "allowed" : "refused", last.headers["X-RateLimit-Limit"]);
       })();`);
     assert.equal(out.split("\n").pop(), "refused 100");
@@ -134,7 +134,7 @@ describe("configuration that does not parse keeps the default", () => {
       const { checkToolRateLimit } = require("./lib/rate-limit-middleware.cjs");
       (async () => {
         const r = [];
-        for (let i = 0; i < 5; i++) r.push((await checkToolRateLimit({ tool: "t", clientIp: "6.6.6." + i })).statusCode || 200);
+        for (let i = 0; i < 5; i++) r.push((await checkToolRateLimit({ tool: "t", clientIp: "198.51.100." + i })).statusCode || 200);
         console.log(r.join(","));
       })();`);
     assert.equal(out.split("\n").pop(), "200,200,200,503,503");
