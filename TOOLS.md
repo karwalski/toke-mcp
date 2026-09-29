@@ -17,7 +17,7 @@ Compress text using toke compression (`tkc --compress`).
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `input` | `string` | yes | Text to compress |
-| `preserve_atoms` | `string[]` | no | Regex patterns for tokens to preserve unchanged (e.g. `$[A-Z][A-Z0-9_]+[0-9]+`) |
+| `preserve_atoms` | `string[]` | no | **Not supported.** `tkc --compress` has no preserve-atom option; omit the field or pass `[]`. A non-empty list is refused with `{ ok: false, error }` before tkc runs. The field stays in the v1 schema so existing callers that send `[]` keep working. |
 
 **Output**
 
@@ -115,3 +115,4 @@ The following tools are registered in the server but do not have frozen API guar
 | `toke_companion` | Generate/verify/diff `.tkc.md` companion files |
 | `toke_format` | Auto-format toke source code |
 | `toke_migrate` | Migrate legacy 86-char syntax to 59-char default syntax |
+| `toke_feedback` | Submit feedback on generated toke code (compiled, ran, correct, comment) |

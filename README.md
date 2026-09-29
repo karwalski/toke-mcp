@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@tokelang/mcp-server)](https://www.npmjs.com/package/@tokelang/mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Connect your AI coding assistant to the [toke](https://tokelang.dev) programming language. This MCP server gives tools like Claude, Cursor, and VS Code the ability to write, compile, and understand toke code. It implements the [Model Context Protocol](https://modelcontextprotocol.io/) with 14 tools, SSE transport, rate limiting, and IDE integrations.
+Connect your AI coding assistant to the [toke](https://tokelang.dev) programming language. This MCP server gives tools like Claude, Cursor, and VS Code the ability to write, compile, and understand toke code. It implements the [Model Context Protocol](https://modelcontextprotocol.io/) with 15 tools, SSE transport, rate limiting, and IDE integrations.
 
 ## About toke
 
@@ -27,7 +27,7 @@ and nowhere else.*
 
 ## Features
 
-- **14 MCP tools** for compiling, checking, formatting, generating, and analysing toke code
+- **15 MCP tools** for compiling, checking, formatting, generating, and analysing toke code
 - **SSE transport** with session management and health checks
 - **Rate limiting** per IP and tool, held in process memory
 - **IDE integrations** for Claude Code, VS Code, and Codex CLI
@@ -72,6 +72,7 @@ The server starts on `http://localhost:3000` with:
 | `toke_decompress` | Decompress toke-compressed text |
 | `toke_analyse` | Pre-flight token budget estimation without modifying input |
 | `toke_render` | Render parameterised templates with `{{varname}}` substitution |
+| `toke_feedback` | Submit feedback on generated toke code: whether it compiled, ran and was correct |
 
 For detailed input/output schemas, see [TOOLS.md](TOOLS.md).
 
@@ -177,7 +178,7 @@ app.listen(3000);
 
 ```
 toke-mcp/
-  server.js              MCP server with all 14 tools registered
+  server.js              MCP server with all 15 tools registered
   tools/                 Individual tool implementations
   lib/                   Rate limiting, connection registry, caching
   bin/                   CLI entry point (npx toke-mcp)
