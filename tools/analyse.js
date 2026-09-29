@@ -2,10 +2,7 @@ import { writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { execTkc } from "../lib/run-tkc.js";
 
 const TKC_PATH = process.env.TKC_PATH || "tkc";
 
@@ -66,7 +63,7 @@ export async function tokeAnalyse(input, tokenizer = "cl100k_base") {
   try {
     await writeFile(tmpFile, input, "utf-8");
 
-    const { stdout } = await execFileAsync(
+    const { stdout } = await execTkc(
       TKC_PATH,
       ["--analyse", "--tokenizer", effectiveTokenizer, tmpFile],
       { timeout: 30_000 }

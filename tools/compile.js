@@ -2,12 +2,9 @@ import { writeFile, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { execTkc } from "../lib/run-tkc.js";
 import { record } from "../lib/telemetry.js";
 import { parseTkcDiagnostics } from "../lib/tkc-diagnostics.js";
-
-const execFileAsync = promisify(execFile);
 
 const TKC_PATH = process.env.TKC_PATH || "tkc";
 
@@ -32,7 +29,7 @@ export async function tokeCompile(sourceCode) {
   try {
     await writeFile(tmpFile, sourceCode, "utf-8");
 
-    const { stderr } = await execFileAsync(
+    const { stderr } = await execTkc(
       TKC_PATH,
       ["--emit-llvm", "--out", outFile, tmpFile],
       { timeout: 10_000 }

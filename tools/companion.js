@@ -2,10 +2,7 @@ import { writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { execTkc } from "../lib/run-tkc.js";
 
 const TKC_PATH = process.env.TKC_PATH || "tkc";
 
@@ -26,7 +23,7 @@ export async function tokeCompanion(source, mode = "generate", companion) {
     await writeFile(tmpSource, source, "utf-8");
 
     if (mode === "generate") {
-      const { stdout } = await execFileAsync(
+      const { stdout } = await execTkc(
         TKC_PATH,
         ["--companion", tmpSource],
         { timeout: 10_000 }
@@ -42,7 +39,7 @@ export async function tokeCompanion(source, mode = "generate", companion) {
 
       await writeFile(tmpCompanion, companion, "utf-8");
 
-      const { stdout, stderr } = await execFileAsync(
+      const { stdout, stderr } = await execTkc(
         TKC_PATH,
         ["--verify-companion", tmpCompanion],
         { timeout: 10_000 }
@@ -58,7 +55,7 @@ export async function tokeCompanion(source, mode = "generate", companion) {
 
       await writeFile(tmpCompanion, companion, "utf-8");
 
-      const { stdout, stderr } = await execFileAsync(
+      const { stdout, stderr } = await execTkc(
         TKC_PATH,
         ["--companion-diff", tmpCompanion, tmpSource],
         { timeout: 10_000 }

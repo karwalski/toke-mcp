@@ -3,10 +3,7 @@ import { writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { execTkc } from "../lib/run-tkc.js";
 
 const TKC_PATH = process.env.TKC_PATH || "tkc";
 
@@ -30,7 +27,7 @@ export async function tokeCompress(input, preserve_atoms = []) {
       args.push("--preserve-atom", pattern);
     }
 
-    const { stdout } = await execFileAsync(TKC_PATH, args, { timeout: 30_000 });
+    const { stdout } = await execTkc(TKC_PATH, args, { timeout: 30_000 });
 
     // tkc --compress emits JSON: { compressed, original_tokens, compressed_tokens }
     try {
@@ -85,7 +82,7 @@ export async function tokeDecompress(input) {
   try {
     await writeFile(tmpFile, input, "utf-8");
 
-    const { stdout } = await execFileAsync(
+    const { stdout } = await execTkc(
       TKC_PATH,
       ["--decompress", tmpFile],
       { timeout: 30_000 }

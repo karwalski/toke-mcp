@@ -44,6 +44,19 @@ try {
 // ---------------------------------------------------------------------------
 
 /**
+ * Longest source/input a tool accepts, in characters (121.26, audit TOK-02).
+ * The Lambda handlers capped source at 64 KB; the SSE and stdio handlers
+ * had only Express's JSON body limit. TOOL_MAX_SOURCE_CHARS overrides.
+ */
+const MAX_SOURCE_CHARS = (() => {
+  const n = Number(process.env.TOOL_MAX_SOURCE_CHARS);
+  return Number.isInteger(n) && n > 0 ? n : 65536;
+})();
+
+/** Names of the tools createMcpServer registers; filled as it runs. */
+export const TOOL_NAMES = new Set();
+
+/**
  * Create a configured MCP server with all 15 toke tools registered.
  *
  * @param {object} [options]
@@ -56,11 +69,15 @@ export function createMcpServer(options = {}) {
     name: options.name || "toke-mcp",
     version: options.version || PKG_VERSION,
   });
+  // Record every registered tool name: the rate limiter buckets any other
+  // (client-chosen) name together (121.14).
+  const register = server.tool.bind(server);
+  server.tool = (name, ...rest) => { TOOL_NAMES.add(name); return register(name, ...rest); };
 
   server.tool(
     "toke_check",
     "Check Toke source code for errors. Returns JSON diagnostics.",
-    { source: z.string().describe("Toke source code to check") },
+    { source: z.string().max(MAX_SOURCE_CHARS).describe("Toke source code to check") },
     async ({ source }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeCheck(source), null, 2) }],
     })
@@ -69,7 +86,7 @@ export function createMcpServer(options = {}) {
   server.tool(
     "toke_compile",
     "Compile Toke source code to LLVM IR. Returns IR on success or diagnostics on error.",
-    { source: z.string().describe("Toke source code to compile") },
+    { source: z.string().max(MAX_SOURCE_CHARS).describe("Toke source code to compile") },
     async ({ source }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeCompile(source), null, 2) }],
     })
@@ -122,7 +139,7 @@ export function createMcpServer(options = {}) {
     "toke_bench",
     "Benchmark Toke source code against a known task. Compares token count vs Python baseline.",
     {
-      source: z.string().describe("Toke source code to benchmark"),
+      source: z.string().max(MAX_SOURCE_CHARS).describe("Toke source code to benchmark"),
       task_id: z.string().describe("Benchmark task ID, e.g. 'hello-world', 'fizzbuzz', 'fibonacci'"),
     },
     async ({ source, task_id }) => ({
@@ -134,9 +151,9 @@ export function createMcpServer(options = {}) {
     "toke_companion",
     "Generate, verify, or diff a toke companion file (.tkc.md) skeleton from source code.",
     {
-      source: z.string().describe("Toke source code"),
+      source: z.string().max(MAX_SOURCE_CHARS).describe("Toke source code"),
       mode: z.enum(["generate", "verify", "diff"]).optional().describe("Mode: 'generate' (default), 'verify', or 'diff'"),
-      companion: z.string().optional().describe("Existing companion file content (required for verify/diff modes)"),
+      companion: z.string().max(MAX_SOURCE_CHARS).optional().describe("Existing companion file content (required for verify/diff modes)"),
     },
     async ({ source, mode, companion }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeCompanion(source, mode, companion), null, 2) }],
@@ -146,7 +163,7 @@ export function createMcpServer(options = {}) {
   server.tool(
     "toke_format",
     "Auto-format toke source code. Tries tkc --fmt first, falls back to a JS-based formatter that normalises indentation, spacing, semicolons, and blank lines.",
-    { source: z.string().describe("Toke source code to format") },
+    { source: z.string().max(MAX_SOURCE_CHARS).describe("Toke source code to format") },
     async ({ source }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeFormat(source), null, 2) }],
     })
@@ -155,7 +172,7 @@ export function createMcpServer(options = {}) {
   server.tool(
     "toke_migrate",
     "Migrate legacy 86-char syntax toke code to the 59-char default syntax using tkc --migrate.",
-    { source: z.string().describe("Legacy 86-char syntax toke source code to migrate") },
+    { source: z.string().max(MAX_SOURCE_CHARS).describe("Legacy 86-char syntax toke source code to migrate") },
     async ({ source }) => ({
       content: [{ type: "text", text: JSON.stringify(await tokeMigrate(source), null, 2) }],
     })
@@ -166,9 +183,10 @@ export function createMcpServer(options = {}) {
     "toke_compress",
     "Compress text using toke compression (tkc --compress). Returns compressed output with token reduction stats.",
     {
-      input: z.string().describe("Text to compress"),
+      input: z.string().max(MAX_SOURCE_CHARS).describe("Text to compress"),
       preserve_atoms: z
-        .array(z.string())
+        .array(z.string().max(256).refine((p) => !p.startsWith("-"), "a pattern may not start with '-'"))
+        .max(32)
         .optional()
         .describe(
           "Regex patterns for tokens to preserve unchanged (e.g. '$[A-Z][A-Z0-9_]+[0-9]+')"
@@ -192,7 +210,7 @@ export function createMcpServer(options = {}) {
     "toke_decompress",
     "Decompress toke-compressed text (tkc --decompress). Returns the original text.",
     {
-      input: z.string().describe("Compressed text to decompress"),
+      input: z.string().max(MAX_SOURCE_CHARS).describe("Compressed text to decompress"),
     },
     async ({ input }) => ({
       content: [
@@ -208,7 +226,7 @@ export function createMcpServer(options = {}) {
     "toke_analyse",
     "Pre-flight token budget estimation. Analyses text and reports raw and estimated compressed token counts without modifying the input.",
     {
-      input: z.string().describe("Text to analyse"),
+      input: z.string().max(MAX_SOURCE_CHARS).describe("Text to analyse"),
       tokenizer: z
         .enum(["cl100k_base", "o200k_base", "toke-bpe"])
         .optional()
@@ -254,7 +272,7 @@ export function createMcpServer(options = {}) {
     "toke_feedback",
     "Submit feedback on generated toke code — whether it compiled, ran correctly, and optional comments.",
     {
-      source: z.string().describe("The toke source code being reviewed"),
+      source: z.string().max(MAX_SOURCE_CHARS).describe("The toke source code being reviewed"),
       prompt: z.string().describe("The original prompt or description used to generate the code"),
       compiles: z.boolean().describe("Whether the code compiles successfully"),
       runs: z.boolean().optional().describe("Whether the code runs successfully"),
@@ -286,11 +304,28 @@ export function createApp(options = {}) {
   const app = express();
   const TKC_PATH = process.env.TKC_PATH || "tkc";
 
-  // CORS
+  // CORS (121.26, audit TOK-05). With no CORS_ALLOW_ORIGINS the server
+  // stays open to any origin, as an unauthenticated public server, but no
+  // longer invites an Authorization header: "*" together with
+  // Authorization let any web page send whatever credential a self-hoster
+  // layered on. CORS_ALLOW_ORIGINS (comma-separated) switches to an
+  // allow-list: a listed Origin is echoed, with Authorization allowed, and
+  // any other origin gets no CORS grant.
+  const corsOrigins = (process.env.CORS_ALLOW_ORIGINS || "")
+    .split(",").map((o) => o.trim()).filter(Boolean);
   app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    if (corsOrigins.length === 0) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    } else {
+      res.setHeader("Vary", "Origin");
+      const origin = req.headers.origin;
+      if (origin && corsOrigins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      }
+    }
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.setHeader("Access-Control-Expose-Headers", "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After");
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
@@ -307,6 +342,7 @@ export function createApp(options = {}) {
   });
 
   const transports = {};
+  if (TOOL_NAMES.size === 0) createMcpServer();   // learn the tool names
 
   // SSE endpoint
   app.get("/mcp/sse", async (req, res) => {
@@ -373,7 +409,7 @@ export function createApp(options = {}) {
         }
       } else {
         // Default: use built-in rate limiter
-        const rlResult = await checkToolRateLimit({ tool: toolName, clientIp });
+        const rlResult = await checkToolRateLimit({ tool: toolName, clientIp, knownTools: TOOL_NAMES });
         for (const [key, val] of Object.entries(rlResult.headers)) {
           res.setHeader(key, val);
         }
