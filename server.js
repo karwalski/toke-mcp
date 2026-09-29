@@ -304,11 +304,28 @@ export function createApp(options = {}) {
   const app = express();
   const TKC_PATH = process.env.TKC_PATH || "tkc";
 
-  // CORS
+  // CORS (121.26, audit TOK-05). With no CORS_ALLOW_ORIGINS the server
+  // stays open to any origin, as an unauthenticated public server, but no
+  // longer invites an Authorization header: "*" together with
+  // Authorization let any web page send whatever credential a self-hoster
+  // layered on. CORS_ALLOW_ORIGINS (comma-separated) switches to an
+  // allow-list: a listed Origin is echoed, with Authorization allowed, and
+  // any other origin gets no CORS grant.
+  const corsOrigins = (process.env.CORS_ALLOW_ORIGINS || "")
+    .split(",").map((o) => o.trim()).filter(Boolean);
   app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    if (corsOrigins.length === 0) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    } else {
+      res.setHeader("Vary", "Origin");
+      const origin = req.headers.origin;
+      if (origin && corsOrigins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      }
+    }
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.setHeader("Access-Control-Expose-Headers", "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After");
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();

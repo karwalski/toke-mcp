@@ -144,6 +144,7 @@ Copy `codex/codex.md` and `codex/mcp.json` into your project root. See [`codex/R
 | `RATE_LIMIT_PER_HOUR` | `100` | Max tool calls per hour per IP, per tool. Calls naming a tool the server does not have share one bucket. |
 | `RATE_LIMIT_WINDOW_SEC` | `3600` | Sliding window for `RATE_LIMIT_PER_HOUR` |
 | `MAX_CONNECTIONS` | `5` | Max concurrent SSE connections per IP |
+| `CORS_ALLOW_ORIGINS` | -- | Comma-separated origins allowed to call the server from a browser; a listed origin may also send `Authorization`. Unset: any origin, `Content-Type` only. |
 | `STORE_MAX_KEYS` | `100000` | Most keys the in-memory limit store holds. When it is full, new work is refused (503) rather than the store growing. |
 | `REDIS_URL` | -- | **Not read.** Rate and connection limits are held in the server process's memory, so they are per-process and reset on restart. |
 
