@@ -13,19 +13,27 @@ const TKC_PATH = process.env.TKC_PATH || "tkc";
  * Stable API v1: input, preserve_atoms → compressed, original_tokens, compressed_tokens, reduction_pct
  *
  * @param {string} input - Text to compress
- * @param {string[]} [preserve_atoms=[]] - Regex patterns for tokens to preserve unchanged
+ * @param {string[]} [preserve_atoms=[]] - Not supported by tkc: must be empty (see below)
  * @returns {Promise<object>}
  */
+// toke 121.43 (9): tkc has no --preserve-atom flag (`tkc: unknown flag:
+// --preserve-atom`, exit 3), so every call that passed a pattern failed after
+// spawning tkc, with tkc's usage error as the only explanation.  The field
+// stays in the frozen v1 schema; a non-empty list is refused here, before tkc
+// runs, with an error that says why.
+export const PRESERVE_ATOMS_UNSUPPORTED =
+  "preserve_atoms is not supported: tkc --compress has no --preserve-atom option; pass an empty list or omit it";
+
 export async function tokeCompress(input, preserve_atoms = []) {
+  if (Array.isArray(preserve_atoms) && preserve_atoms.length > 0) {
+    return { ok: false, error: PRESERVE_ATOMS_UNSUPPORTED };
+  }
   const tmpFile = join(tmpdir(), `toke-compress-${randomUUID()}.txt`);
 
   try {
     await writeFile(tmpFile, input, "utf-8");
 
     const args = ["--compress", tmpFile];
-    for (const pattern of preserve_atoms) {
-      args.push("--preserve-atom", pattern);
-    }
 
     const { stdout } = await execTkc(TKC_PATH, args, { timeout: 30_000 });
 

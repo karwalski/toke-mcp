@@ -189,7 +189,7 @@ export function createMcpServer(options = {}) {
         .max(32)
         .optional()
         .describe(
-          "Regex patterns for tokens to preserve unchanged (e.g. '$[A-Z][A-Z0-9_]+[0-9]+')"
+          "Not supported: tkc --compress has no preserve-atom option. Omit it or pass []; a non-empty list is refused."
         ),
     },
     async ({ input, preserve_atoms }) => ({
