@@ -141,9 +141,13 @@ Copy `codex/codex.md` and `codex/mcp.json` into your project root. See [`codex/R
 |---------------------|---------|-------------|
 | `PORT` | `3000` | Server port |
 | `TKC_PATH` | `tkc` | Path to tkc compiler binary |
-| `RATE_LIMIT_PER_HOUR` | `100` | Max requests per hour per IP |
+| `RATE_LIMIT_PER_HOUR` | `100` | Max tool calls per hour per IP, per tool. Calls naming a tool the server does not have share one bucket. |
+| `RATE_LIMIT_WINDOW_SEC` | `3600` | Sliding window for `RATE_LIMIT_PER_HOUR` |
 | `MAX_CONNECTIONS` | `5` | Max concurrent SSE connections per IP |
+| `STORE_MAX_KEYS` | `100000` | Most keys the in-memory limit store holds. When it is full, new work is refused (503) rather than the store growing. |
 | `REDIS_URL` | -- | **Not read.** Rate and connection limits are held in the server process's memory, so they are per-process and reset on restart. |
+
+The limits fail closed: if the limit store errors or is full, tool calls and new SSE connections are refused with `503` and `Retry-After`, not let through. A limit variable that is not a positive integer is ignored with a warning, and the default applies.
 | `TOKE_TELEMETRY` | -- | Set to `1` to enable local telemetry recording. When enabled, source code that passes `toke_check` or compiles successfully is saved (with string literals stripped) to `~/.toke/telemetry/` for potential corpus inclusion. Files are deduplicated by content hash. No data is sent to any server. |
 
 ## Extending

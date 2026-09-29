@@ -43,6 +43,9 @@ try {
 // MCP Server factory
 // ---------------------------------------------------------------------------
 
+/** Names of the tools createMcpServer registers; filled as it runs. */
+export const TOOL_NAMES = new Set();
+
 /**
  * Create a configured MCP server with all 15 toke tools registered.
  *
@@ -56,6 +59,10 @@ export function createMcpServer(options = {}) {
     name: options.name || "toke-mcp",
     version: options.version || PKG_VERSION,
   });
+  // Record every registered tool name: the rate limiter buckets any other
+  // (client-chosen) name together (121.14).
+  const register = server.tool.bind(server);
+  server.tool = (name, ...rest) => { TOOL_NAMES.add(name); return register(name, ...rest); };
 
   server.tool(
     "toke_check",
@@ -307,6 +314,7 @@ export function createApp(options = {}) {
   });
 
   const transports = {};
+  if (TOOL_NAMES.size === 0) createMcpServer();   // learn the tool names
 
   // SSE endpoint
   app.get("/mcp/sse", async (req, res) => {
@@ -373,7 +381,7 @@ export function createApp(options = {}) {
         }
       } else {
         // Default: use built-in rate limiter
-        const rlResult = await checkToolRateLimit({ tool: toolName, clientIp });
+        const rlResult = await checkToolRateLimit({ tool: toolName, clientIp, knownTools: TOOL_NAMES });
         for (const [key, val] of Object.entries(rlResult.headers)) {
           res.setHeader(key, val);
         }
