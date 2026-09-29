@@ -9,10 +9,7 @@ import { writeFile, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { execTkc } from "../lib/run-tkc.js";
 
 const TKC_PATH = process.env.TKC_PATH || "tkc";
 
@@ -113,7 +110,7 @@ export async function tokeFormat(sourceCode) {
 
     // Try tkc --fmt first
     try {
-      await execFileAsync(TKC_PATH, ["--fmt", tmpFile], { timeout: 10_000 });
+      await execTkc(TKC_PATH, ["--fmt", tmpFile], { timeout: 10_000 });
       const formatted = await readFile(tmpFile, "utf-8");
       return { ok: true, formatted, engine: "tkc" };
     } catch {

@@ -2,10 +2,7 @@ import { writeFile, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { execTkc } from "../lib/run-tkc.js";
 
 const TKC_PATH = process.env.TKC_PATH || "tkc";
 
@@ -19,7 +16,7 @@ export async function tokeMigrate(sourceCode) {
   try {
     await writeFile(tmpFile, sourceCode, "utf-8");
 
-    const { stdout, stderr } = await execFileAsync(
+    const { stdout, stderr } = await execTkc(
       TKC_PATH,
       ["--migrate", tmpFile],
       { timeout: 10_000 }

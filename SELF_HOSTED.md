@@ -54,6 +54,18 @@ Add to your project's `mcp.json`:
 | `PORT` | `3000` | HTTP server port |
 | `TKC_PATH` | `/usr/local/bin/tkc` | Path to tkc binary inside the container |
 | `LOG_LEVEL` | `info` | Logging verbosity |
+| `TKC_MAX_CONCURRENT` | CPU count | Most `tkc` processes running at once; further tool calls wait |
+| `TKC_MAX_QUEUE` | `32` | Most tool calls waiting for `tkc`; past this a call is refused as busy |
+| `TKC_MEMORY_LIMIT_MB` | unset | Run `tkc` under `ulimit -v` with this many MiB. Linux only: where the limit cannot be applied, tool calls fail rather than run without it |
+| `TOOL_MAX_SOURCE_CHARS` | `65536` | Longest source or input a tool accepts |
+
+See the [README](README.md#configuration) for the rate and connection limits.
+
+Every tool call that compiles runs the native `tkc` binary on client-supplied
+source, as the server's own user. The variables above bound how many run and
+how much they may take; the operating-system boundary is yours to set: run the
+server as a dedicated unprivileged user, in a container (the image here does),
+with a memory and CPU limit on the container.
 
 Example with custom port:
 
