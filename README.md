@@ -141,6 +141,7 @@ Copy `codex/codex.md` and `codex/mcp.json` into your project root. See [`codex/R
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
 | `PORT` | `3000` | Server port |
+| `BIND_HOST` | -- | Address to bind. Unset: all interfaces. `PORT=0` binds a free port, and the startup line prints the one bound. |
 | `TKC_PATH` | `tkc` | Path to tkc compiler binary |
 | `RATE_LIMIT_PER_HOUR` | `100` | Max tool calls per hour per IP, per tool. Calls naming a tool the server does not have share one bucket. |
 | `RATE_LIMIT_WINDOW_SEC` | `3600` | Sliding window for `RATE_LIMIT_PER_HOUR` |

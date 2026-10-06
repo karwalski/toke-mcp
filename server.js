@@ -446,11 +446,16 @@ export function createApp(options = {}) {
 const isMain = process.argv[1] && fileURLToPath(import.meta.url).endsWith(process.argv[1].replace(/.*\//, ""));
 if (isMain) {
   const PORT = parseInt(process.env.PORT || "3000", 10);
+  // BIND_HOST unset keeps the default (all interfaces). PORT=0 asks the OS for a
+  // free port; the line below prints the port actually bound, which is what
+  // the tests read (132.119).
+  const HOST = process.env.BIND_HOST || undefined;
   const app = createApp();
-  app.listen(PORT, () => {
-    console.log(`toke-mcp server listening on http://localhost:${PORT}`);
-    console.log(`  SSE endpoint:    http://localhost:${PORT}/mcp/sse`);
-    console.log(`  Health check:    http://localhost:${PORT}/health`);
+  const server = app.listen(PORT, HOST, () => {
+    const port = server.address().port;
+    console.log(`toke-mcp server listening on http://${HOST || "localhost"}:${port}`);
+    console.log(`  SSE endpoint:    http://${HOST || "localhost"}:${port}/mcp/sse`);
+    console.log(`  Health check:    http://${HOST || "localhost"}:${port}/health`);
     console.log(`  tkc binary:      ${process.env.TKC_PATH || "tkc (on PATH)"}`);
   });
 }
