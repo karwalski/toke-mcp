@@ -29,7 +29,7 @@ and nowhere else.*
 
 - **15 MCP tools** for compiling, checking, formatting, generating, and analysing toke code
 - **SSE transport** with session management and health checks
-- **Rate limiting** per IP and tool, held in process memory
+- **Rate limiting** per IP and tool, held in process memory -- limits are **per process** (see [Rate limits are per process](#rate-limits-are-per-process))
 - **IDE integrations** for Claude Code, VS Code, and Codex CLI
 - **Embeddable** -- export `createMcpServer()` and `createApp()` for custom infrastructure
 - **Self-hostable** with Docker or standalone Node.js
@@ -150,6 +150,20 @@ Copy `codex/codex.md` and `codex/mcp.json` into your project root. See [`codex/R
 | `REDIS_URL` | -- | **Not read.** Rate and connection limits are held in the server process's memory, so they are per-process and reset on restart. |
 
 The limits fail closed: if the limit store errors or is full, tool calls and new SSE connections are refused with `503` and `Retry-After`, not let through. A limit variable that is not a positive integer is ignored with a warning, and the default applies.
+
+### Rate limits are per process
+
+`RATE_LIMIT_PER_HOUR` and `MAX_CONNECTIONS` are enforced by **each server process on its own**. The
+counters live in that process's memory (`lib/redis-client.cjs` is an in-process store, not a Redis
+client), so:
+
+- running *N* processes or replicas behind a load balancer allows a client up to *N* times each limit;
+- restarting a process resets its counters;
+- `REDIS_URL` has no effect -- there is no shared store across instances.
+
+This is the intended model for a single instance. If you run more
+than one instance, divide the limits by the instance count, or enforce a shared limit in front of
+the servers (reverse proxy or API gateway).
 | `TOKE_TELEMETRY` | -- | Set to `1` to enable local telemetry recording. When enabled, source code that passes `toke_check` or compiles successfully is saved (with string literals stripped) to `~/.toke/telemetry/` for potential corpus inclusion. Files are deduplicated by content hash. No data is sent to any server. |
 
 ## Extending

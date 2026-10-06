@@ -59,7 +59,9 @@ Add to your project's `mcp.json`:
 | `TKC_MEMORY_LIMIT_MB` | unset | Run `tkc` under `ulimit -v` with this many MiB. Linux only: where the limit cannot be applied, tool calls fail rather than run without it |
 | `TOOL_MAX_SOURCE_CHARS` | `65536` | Longest source or input a tool accepts |
 
-See the [README](README.md#configuration) for the rate and connection limits.
+See the [README](README.md#configuration) for the rate and connection limits. They are
+[per process](README.md#rate-limits-are-per-process): each instance counts on its own, so N
+replicas allow N times each limit.
 
 Every tool call that compiles runs the native `tkc` binary on client-supplied
 source, as the server's own user. The variables above bound how many run and
