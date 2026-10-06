@@ -15,7 +15,9 @@ async function preflight(env, origin) {
   try {
     const { createApp } = await import("../server.js");
     const app = createApp();
-    const srv = app.listen(0);
+    // Loopback only, so the fetch below cannot reach some other listener that
+    // holds the same port on 127.0.0.1 while this one holds it on "::" (132.119).
+    const srv = app.listen(0, "127.0.0.1");
     await new Promise((r) => srv.once("listening", r));
     try {
       const res = await fetch(`http://127.0.0.1:${srv.address().port}/health`, {
@@ -27,7 +29,7 @@ async function preflight(env, origin) {
         acao: res.headers.get("access-control-allow-origin"),
         acah: res.headers.get("access-control-allow-headers") || "",
       };
-    } finally { srv.close(); }
+    } finally { srv.closeAllConnections(); srv.close(); }
   } finally {
     if (saved === undefined) delete process.env.CORS_ALLOW_ORIGINS;
     else process.env.CORS_ALLOW_ORIGINS = saved;

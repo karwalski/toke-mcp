@@ -10,7 +10,7 @@
 //   - MAX_CONNECTIONS=five parsed to NaN, and count >= NaN is false;
 //   - each tool NAME had its own bucket, so a new name was a new, empty one;
 //   - the in-process store never dropped a key nobody read again.
-import { describe, it, beforeEach, afterEach } from "node:test";
+import { describe, it, after, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { spawn, execFileSync } from "node:child_process";
@@ -145,70 +145,132 @@ describe("configuration that does not parse keeps the default", () => {
 // Through the real HTTP server: SSE session, then tools/call messages.
 // ---------------------------------------------------------------------------
 
+// 132.119: every spawned server is torn down whatever happens to the test.
+// Each binds a free port (PORT=0) on loopback and reports the port it got;
+// readiness, the SSE handshake and each POST have a bound, so a failure is a
+// failure, not a hang; and the children are killed in afterEach, after, and
+// on process exit, so a failing or cancelled run leaves no node server.js.
+const STEP_MS = 10000;
+const live = new Set();
+
+function killNow(child) {
+  if (child.exitCode === null && child.signalCode === null) {
+    try { child.kill("SIGKILL"); } catch { /* already gone */ }
+  }
+}
+
+async function stopServer(child) {
+  live.delete(child);
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const gone = new Promise((r) => child.once("exit", r));
+  child.kill("SIGTERM");
+  const t = setTimeout(() => killNow(child), 2000);
+  await gone;
+  clearTimeout(t);
+}
+
+const openReqs = new Set();
+
+async function stopAll() {
+  for (const r of openReqs) r.destroy();
+  openReqs.clear();
+  await Promise.all([...live].map(stopServer));
+}
+
+// File level, so they cover every test in this file, failing ones included.
+afterEach(stopAll);
+after(stopAll);
+
+process.on("exit", () => { for (const c of live) killNow(c); });
+for (const sig of ["SIGINT", "SIGTERM"]) {
+  process.once(sig, () => { for (const c of live) killNow(c); process.exit(130); });
+}
+
 function startServer(env) {
   return new Promise((resolve, reject) => {
-    const port = 20000 + Math.floor(Math.random() * 20000);
     const child = spawn(process.execPath, ["server.js"], {
-      cwd: ROOT, env: { ...process.env, PORT: String(port), ...env }, stdio: ["ignore", "pipe", "pipe"],
+      cwd: ROOT,
+      env: { ...process.env, PORT: "0", BIND_HOST: "127.0.0.1", ...env },
+      stdio: ["ignore", "pipe", "pipe"],
     });
+    live.add(child);
     let out = "";
+    let done = false;
+    const fail = (err) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      stopServer(child).then(() => reject(err));
+    };
+    const timer = setTimeout(() => fail(new Error(`server not ready in ${STEP_MS}ms: ${out}`)), STEP_MS);
     const onData = (d) => {
       out += d;
-      if (out.includes("listening")) { child.stdout.off("data", onData); resolve({ child, port }); }
+      const m = out.match(/listening on http:\/\/[^:\s]+:(\d+)/);
+      if (m && !done) {
+        done = true;
+        clearTimeout(timer);
+        child.stdout.off("data", onData);
+        child.stdout.resume();
+        resolve({ child, port: Number(m[1]) });
+      }
     };
     child.stdout.on("data", onData);
-    child.on("exit", (code) => reject(new Error(`server exited ${code}: ${out}`)));
-    setTimeout(() => reject(new Error(`server did not start: ${out}`)), 10000).unref();
+    child.stderr.on("data", (d) => { out += d; });
+    child.on("error", fail);
+    child.on("exit", (code, sig) => fail(new Error(`server exited ${code ?? sig}: ${out}`)));
   });
 }
 
 function openSession(port) {
   return new Promise((resolve, reject) => {
-    const req = http.get({ port, path: "/mcp/sse" }, (res) => {
+    const req = http.get({ host: "127.0.0.1", port, path: "/mcp/sse", agent: false }, (res) => {
       if (res.statusCode !== 200) { resolve({ status: res.statusCode, req }); res.resume(); return; }
       let buf = "";
       res.on("data", (d) => {
         buf += d;
         const m = buf.match(/sessionId=([0-9a-f-]+)/);
-        if (m) resolve({ status: 200, sessionId: m[1], req });
+        if (m) { req.setTimeout(0); resolve({ status: 200, sessionId: m[1], req }); }
       });
     });
+    openReqs.add(req);
+    req.on("close", () => openReqs.delete(req));
+    req.setTimeout(STEP_MS, () => req.destroy(new Error(`no SSE session in ${STEP_MS}ms`)));
     req.on("error", reject);
   });
 }
 
-async function post(port, sessionId, body) {
-  const res = await fetch(`http://127.0.0.1:${port}/mcp/messages?sessionId=${sessionId}`, {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+function post(port, sessionId, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = http.request({
+      host: "127.0.0.1", port, method: "POST", agent: false,
+      path: `/mcp/messages?sessionId=${sessionId}`,
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data), Connection: "close" },
+    }, (res) => { res.resume(); res.on("end", () => resolve(res.statusCode)); });
+    req.setTimeout(STEP_MS, () => req.destroy(new Error(`POST got no answer in ${STEP_MS}ms`)));
+    req.on("error", reject);
+    req.end(data);
   });
-  await res.text();
-  return res.status;
 }
 
 const call = (id, name) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: { query: "let" } } });
 
-describe("HTTP server", () => {
+describe("HTTP server", { timeout: 60000 }, () => {
   it("refuses the tool call past RATE_LIMIT_PER_HOUR with 429", async () => {
-    const { child, port } = await startServer({ RATE_LIMIT_PER_HOUR: "2" });
-    try {
-      const s = await openSession(port);
-      assert.equal(s.status, 200);
-      const codes = [];
-      for (let i = 1; i <= 3; i++) codes.push(await post(port, s.sessionId, call(i, "toke_spec_lookup")));
-      assert.deepEqual(codes, [202, 202, 429]);
-      s.req.destroy();
-    } finally { child.kill(); }
+    const { port } = await startServer({ RATE_LIMIT_PER_HOUR: "2" });
+    const session = await openSession(port);
+    assert.equal(session.status, 200);
+    const codes = [];
+    for (let i = 1; i <= 3; i++) codes.push(await post(port, session.sessionId, call(i, "toke_spec_lookup")));
+    assert.deepEqual(codes, [202, 202, 429]);
   });
 
   it("refuses tool calls with 503 once the store is full, instead of allowing them", async () => {
     // The first SSE session's bookkeeping fills a 2-key store; the next
     // tools/call needs a new bucket, cannot get one, and is refused.
-    const { child, port } = await startServer({ STORE_MAX_KEYS: "2" });
-    try {
-      const s = await openSession(port);
-      assert.equal(s.status, 200);
-      assert.equal(await post(port, s.sessionId, call(1, "toke_spec_lookup")), 503);
-      s.req.destroy();
-    } finally { child.kill(); }
+    const { port } = await startServer({ STORE_MAX_KEYS: "2" });
+    const session = await openSession(port);
+    assert.equal(session.status, 200);
+    assert.equal(await post(port, session.sessionId, call(1, "toke_spec_lookup")), 503);
   });
 });

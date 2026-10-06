@@ -147,37 +147,49 @@ async function initializeSession(baseUrl, sse) {
 // Server management
 // ---------------------------------------------------------------------------
 
-function spawnServer(port) {
+// 132.119: the server binds a free loopback port (PORT=0) and prints the
+// one it got; a server that does not come up in 10s is killed, and whatever
+// server is running is killed when this process exits, however it exits.
+let liveServer = null;
+process.on("exit", () => {
+  if (liveServer && liveServer.exitCode === null && liveServer.signalCode === null) {
+    try { liveServer.kill("SIGKILL"); } catch { /* already gone */ }
+  }
+});
+
+function spawnServer() {
   return new Promise((resolve, reject) => {
-    const child = spawn("node", [SERVER_JS], {
-      env: { ...process.env, PORT: String(port) },
+    const child = spawn(process.execPath, [SERVER_JS], {
+      env: { ...process.env, PORT: "0", BIND_HOST: "127.0.0.1" },
       stdio: ["ignore", "pipe", "pipe"],
     });
+    liveServer = child;
     let started = false;
+    let out = "";
+
+    const timer = setTimeout(() => {
+      if (!started) { child.kill("SIGKILL"); reject(new Error("Server failed to start within 10s")); }
+    }, 10_000);
 
     child.stdout.on("data", (data) => {
       log("server stdout:", data.toString().trim());
-      if (!started && data.toString().includes("listening")) {
+      out += data;
+      const m = out.match(/listening on http:\/\/[^:\s]+:(\d+)/);
+      if (!started && m) {
         started = true;
-        resolve(child);
+        clearTimeout(timer);
+        resolve({ child, port: Number(m[1]) });
       }
     });
     child.stderr.on("data", (data) => {
       log("server stderr:", data.toString().trim());
     });
-    child.on("error", reject);
+    child.on("error", (err) => { clearTimeout(timer); reject(err); });
     child.on("exit", (code) => {
+      clearTimeout(timer);
       if (!started) reject(new Error(`Server exited with code ${code}`));
     });
-
-    setTimeout(() => {
-      if (!started) reject(new Error("Server failed to start within 10s"));
-    }, 10_000);
   });
-}
-
-function getRandomPort() {
-  return 10000 + Math.floor(Math.random() * 50000);
 }
 
 // ---------------------------------------------------------------------------
@@ -388,12 +400,12 @@ async function main() {
   let baseUrl = externalUrl;
 
   if (!externalUrl) {
-    const port = getRandomPort();
-    baseUrl = `http://localhost:${port}`;
-    console.log(`Spawning server on port ${port}...`);
+    console.log("Spawning server on a free port...");
     try {
-      serverProcess = await spawnServer(port);
-      console.log("Server started.");
+      const { child, port } = await spawnServer();
+      serverProcess = child;
+      baseUrl = `http://127.0.0.1:${port}`;
+      console.log(`Server started on port ${port}.`);
     } catch (err) {
       console.error(`Failed to start server: ${err.message}`);
       process.exit(1);

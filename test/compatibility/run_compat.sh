@@ -44,35 +44,47 @@ done
 # Cleanup function
 # ---------------------------------------------------------------------------
 SERVER_PID=""
+SERVER_LOG=""
 
+# Idempotent: runs on normal exit and on INT/TERM, so the server never
+# outlives this script (132.119).
 cleanup() {
   if [[ -n "$SERVER_PID" ]]; then
     echo ""
     echo "Stopping server (PID $SERVER_PID)..."
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
+    SERVER_PID=""
     echo "Server stopped."
   fi
+  if [[ -n "$SERVER_LOG" ]]; then rm -f "$SERVER_LOG"; SERVER_LOG=""; fi
 }
 trap cleanup EXIT
+trap 'cleanup; exit 130' INT TERM
 
 # ---------------------------------------------------------------------------
 # Start server (unless external URL provided)
 # ---------------------------------------------------------------------------
 if [[ -z "$EXTERNAL_URL" ]]; then
-  # Pick a random port in 10000-59999
-  PORT=$((10000 + RANDOM % 50000))
-  BASE_URL="http://localhost:$PORT"
-
-  echo "=== Starting MCP server on port $PORT ==="
-  PORT=$PORT node "$SERVER_JS" &
+  # PORT=0: the OS picks a free port on loopback and the server prints it, so
+  # two runs (or anything else on the machine) cannot collide on a port.
+  SERVER_LOG="$(mktemp)"
+  echo "=== Starting MCP server on a free port ==="
+  PORT=0 BIND_HOST=127.0.0.1 node "$SERVER_JS" >"$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
 
-  # Wait for the server to be ready (up to 15 seconds)
+  # Wait for the startup line (up to 15 seconds), then for /health.
+  PORT=""
   RETRIES=30
   while [[ $RETRIES -gt 0 ]]; do
-    if curl -s "http://localhost:$PORT/health" >/dev/null 2>&1; then
-      echo "Server is ready (PID $SERVER_PID)."
+    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+      echo "ERROR: server exited before it was ready:"
+      cat "$SERVER_LOG"
+      exit 1
+    fi
+    PORT="$(sed -n 's|.*listening on http://[^:]*:\([0-9][0-9]*\).*|\1|p' "$SERVER_LOG" | head -1)"
+    if [[ -n "$PORT" ]] && curl -s "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
+      echo "Server is ready on port $PORT (PID $SERVER_PID)."
       break
     fi
     sleep 0.5
@@ -81,8 +93,10 @@ if [[ -z "$EXTERNAL_URL" ]]; then
 
   if [[ $RETRIES -eq 0 ]]; then
     echo "ERROR: Server failed to start within 15 seconds."
+    cat "$SERVER_LOG"
     exit 1
   fi
+  BASE_URL="http://127.0.0.1:$PORT"
 else
   BASE_URL="$EXTERNAL_URL"
   echo "=== Testing against external server: $BASE_URL ==="
