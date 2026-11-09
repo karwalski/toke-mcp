@@ -38,4 +38,4 @@ A postinstall script copies the binary into place.
 
 ## License
 
-MIT
+MIT. See [LICENSE](https://github.com/karwalski/toke-mcp/blob/main/LICENSE).
