@@ -1,10 +1,10 @@
 # Contributing to toke-mcp
 
-Thank you for your interest in contributing to the Toke MCP server. This guide covers local setup, testing, code style, and how to add new tools.
+Thank you for your interest in contributing to the toke MCP server. This guide covers local setup, testing, code style, and how to add new tools.
 
 ## Local development setup
 
-1. **Prerequisites:** Node.js 20+, a `tkc` binary on your PATH (or set `TKC_PATH`).
+1. **Prerequisites:** Node.js 18+ (`package.json` `engines`), a `tkc` binary on your PATH (or set `TKC_PATH`).
 
 2. **Clone and install:**
    ```bash
@@ -23,7 +23,7 @@ Thank you for your interest in contributing to the Toke MCP server. This guide c
    curl http://localhost:3000/health
    ```
 
-   You should see `{"status":"ok","version":"0.1.0","tkc":true}` (or `tkc: false` if the binary is not installed).
+   You should see `{"status":"ok","version":"<package.json version>","tkc":true}` (or `tkc: false` if the binary is not installed).
 
 ## Running tests
 
@@ -32,11 +32,12 @@ Thank you for your interest in contributing to the Toke MCP server. This guide c
 npm test
 
 # Run a specific test file
-node --test test/check_test.js
-
-# Run sandbox security tests (requires Docker)
-cd sandbox && bash test_security.sh
+node --test test/test_check.js
 ```
+
+`npm test` runs three suites in order: `test:unit` (`node --test test/test_*.js`),
+`test:e2e` (`test/e2e_repair_loop.js`) and `test:compat`
+(`test/compatibility/run_compat.sh`).
 
 Tests use Node.js built-in test runner (`node:test`). No additional test framework is needed.
 

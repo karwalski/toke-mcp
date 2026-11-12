@@ -67,7 +67,7 @@ The server starts on `http://localhost:3000` with:
 | `toke_bench` | Benchmark toke code against known tasks |
 | `toke_companion` | Generate, verify, or diff `.tkc.md` companion files |
 | `toke_format` | Auto-format toke source code |
-| `toke_migrate` | Migrate the legacy 86-character syntax to the default syntax |
+| `toke_migrate` | Migrate the legacy 86-character syntax to the default syntax (`tkc --migrate`) |
 | `toke_compress` | Compress text using toke compression |
 | `toke_decompress` | Decompress toke-compressed text |
 | `toke_analyse` | Pre-flight token budget estimation without modifying input |
@@ -114,7 +114,7 @@ Install the extension from source:
 cd vscode-toke
 npm install && npm run compile
 npx vsce package
-code --install-extension toke-language-0.1.0.vsix
+code --install-extension toke-language-0.2.3.vsix   # name-version from vscode-toke/package.json
 ```
 
 See [`vscode-toke/README.md`](vscode-toke/README.md) for configuration and snippets.
@@ -149,6 +149,7 @@ Copy `codex/codex.md` and `codex/mcp.json` into your project root. See [`codex/R
 | `CORS_ALLOW_ORIGINS` | -- | Comma-separated origins allowed to call the server from a browser; a listed origin may also send `Authorization`. Unset: any origin, `Content-Type` only. |
 | `STORE_MAX_KEYS` | `100000` | Most keys the in-memory limit store holds. When it is full, new work is refused (503) rather than the store growing. |
 | `REDIS_URL` | -- | **Not read.** Rate and connection limits are held in the server process's memory, so they are per-process and reset on restart. |
+| `TOKE_TELEMETRY` | -- | Set to `1` to enable local telemetry recording. When enabled, source code that passes `toke_check` or compiles successfully is saved (with string literals stripped) to `~/.toke/telemetry/` for potential corpus inclusion. Files are deduplicated by content hash. No data is sent to any server. |
 
 The limits fail closed: if the limit store errors or is full, tool calls and new SSE connections are refused with `503` and `Retry-After`, not let through. A limit variable that is not a positive integer is ignored with a warning, and the default applies.
 
@@ -165,7 +166,6 @@ client), so:
 This is the intended model for a single instance. If you run more
 than one instance, divide the limits by the instance count, or enforce a shared limit in front of
 the servers (reverse proxy or API gateway).
-| `TOKE_TELEMETRY` | -- | Set to `1` to enable local telemetry recording. When enabled, source code that passes `toke_check` or compiles successfully is saved (with string literals stripped) to `~/.toke/telemetry/` for potential corpus inclusion. Files are deduplicated by content hash. No data is sent to any server. |
 
 ## Extending
 
@@ -203,6 +203,9 @@ toke-mcp/
   vscode-toke/           VS Code extension (syntax, snippets, LSP client)
   lsp/                   Language server (diagnostics, hover, symbols)
   lambda/                AWS Lambda handlers
+  layers/                Lambda layer skeleton for the tkc binary
+  npm-tkc/               The @tokelang/tkc npm package (tkc binary wrapper)
+  data/                  tokenizer_v03.json, the v0.3 vocabulary used for token counts
   test/                  Tests and compatibility suite
   scripts/               Build and publish scripts
 ```
@@ -219,7 +222,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and ho
 
 - [toke](https://github.com/karwalski/toke) -- the toke compiler, spec, and stdlib this server wraps (`tkc`)
 - [toke-corpus](https://github.com/karwalski/toke-corpus) -- training-data generation (opt-in telemetry from this server can feed it)
-- [toke-model](https://github.com/karwalski/toke-models) -- model training behind `toke_generate`
+- [toke-models](https://github.com/karwalski/toke-models) -- model training behind `toke_generate`
 - [toke-tokenizer](https://github.com/karwalski/toke-tokenizer) -- custom tokenizer used for token-budget analysis
 
 ## License
